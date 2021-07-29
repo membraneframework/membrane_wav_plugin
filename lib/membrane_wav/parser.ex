@@ -25,7 +25,7 @@ defmodule Membrane.WAV.Parser do
      |___________________|___________________|_______________________________________|
     ```
     Header may contain additional bytes between `bits per sample` and `"fact"` in case of `format`
-    different than 1 (1 represents PCM / uncompressed format). Length of block from `format` until
+    different from 1 (1 represents PCM / uncompressed format). Length of block from `format` until
     `"fact"` is present in `format block length` (it is 16 for PCM).
 
     Blocks from byte 36 to 48 are optional. There can be additional bytes after `samples per
@@ -35,15 +35,15 @@ defmodule Membrane.WAV.Parser do
     - `:init` - Parser waits for the first 22 bytes. After getting them, it parses these bytes
       to ensure that it is a WAV file. Parser knows `format block length` and `format`, so it
       is able to raise an error in case of different `format` than 1 (PCM) or different
-      length than 16 (for PCM). After parsing, stage is set to `:format`.
+      length than 16 (for PCM). After parsing, the stage is set to `:format`.
     - `:format` - Parser waits for the next 22 bytes - `fmt` subchunk (bytes 20 - 35) without
       `format` and either `"fact"` and `fact block length` or `"data"` and `data length in bytes`.
       Then it parses it and create `Membrane.Caps.Audio.Raw` struct with audio format to send it
       as caps to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
     - `:fact` - Parser waits for `8 + fact block length` bytes. It  parses them only to check if
-      the header is correct, but does not use that data in any way. After parsing, stage is set to
-      `:data`.
-    - `:data` - header is already fully parsed. All new data from input is sent to the output.
+      the header is correct, but does not use that data in any way. After parsing, the stage is
+      set to `:data`.
+    - `:data` - header is already fully parsed. All new data from the input is sent to the output.
   """
 
   use Membrane.Filter
