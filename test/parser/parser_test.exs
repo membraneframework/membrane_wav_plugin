@@ -81,18 +81,18 @@ defmodule Membrane.WAV.ParserTest do
       assert output_file == reference_file
     end
 
-    test "raise an error in case of unsupported format or format subchunk length" do
+    test "raise an error in case of unsupported format or format chunk length" do
       # contains format equal to 2 (not PCM)
       payload_unsupported_format =
         <<82, 73, 70, 70, 52, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 16, 0, 0, 0, 2, 0>>
 
-      # contains format subchunk length equal to 18 (PCM should have 16)
+      # contains format chunk length equal to 18 (PCM should have 16)
       payload_unsupported_format_length =
         <<82, 73, 70, 70, 52, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 18, 0, 0, 0, 1, 0>>
 
       assert_raise(
         RuntimeError,
-        "formats different than PCM are not supported; expected 1, given 2; format subchunk size: 16",
+        "formats different than PCM are not supported; expected 1, given 2; format chunk size: 16",
         fn ->
           @module.handle_process(
             :input,
@@ -105,7 +105,7 @@ defmodule Membrane.WAV.ParserTest do
 
       assert_raise(
         RuntimeError,
-        "format subchunk size different than supported; expected 16, given 18",
+        "format chunk size different than supported; expected 16, given 18",
         fn ->
           @module.handle_process(
             :input,
