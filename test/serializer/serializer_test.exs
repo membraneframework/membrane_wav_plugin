@@ -23,31 +23,18 @@ defmodule Membrane.WAV.SerializerTest do
 
       reference_header = <<
         "RIFF",
-        0,
-        0,
-        0,
-        0,
+        0::32,
         "WAVE",
         "fmt ",
-        16,
-        0,
-        0,
-        0,
-        1,
-        0,
-        1,
-        0,
+        16::32-little,
+        1::16-little,
+        1::16-little,
         16_000::32-little,
         32_000::32-little,
-        2,
-        0,
-        16,
-        0,
+        2::16-little,
+        16::16-little,
         "data",
-        0,
-        0,
-        0,
-        0
+        0::32-little
       >>
 
       {actions, _state} = @module.handle_caps(:input, caps, %{}, %{})
@@ -67,31 +54,18 @@ defmodule Membrane.WAV.SerializerTest do
 
       reference_header = <<
         "RIFF",
-        0,
-        0,
-        0,
-        0,
+        0::32,
         "WAVE",
         "fmt ",
-        16,
-        0,
-        0,
-        0,
-        1,
-        0,
-        2,
-        0,
+        16::32-little,
+        1::16-little,
+        2::16-little,
         44_100::32-little,
         264_600::32-little,
-        6,
-        0,
-        24,
-        0,
+        6::16-little,
+        24::16-little,
         "data",
-        0,
-        0,
-        0,
-        0
+        0::32-little
       >>
 
       {actions, _state} = @module.handle_caps(:input, caps, %{}, %{})
