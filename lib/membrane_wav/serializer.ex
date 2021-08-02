@@ -8,6 +8,9 @@ defmodule Membrane.WAV.Serializer do
   @file_length 0
   @data_length 0
 
+  @audio_format 1
+  @format_chunk_length 16
+
   def_options frames_per_buffer: [
                 type: :integer,
                 spec: pos_integer(),
@@ -38,10 +41,10 @@ defmodule Membrane.WAV.Serializer do
 
   @impl true
   def handle_caps(:input, caps, _context, state) do
-    buffer = create_header(caps)
+    buffer = %Buffer{payload: create_header(caps)}
     state = Map.merge(state, %{header_created: true, caps: caps})
 
-    {{:ok, caps: caps, buffer: {:output, buffer}, redemand: :output}, state}
+    {{:ok, caps: {:output, caps}, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
   @impl true
@@ -73,8 +76,6 @@ defmodule Membrane.WAV.Serializer do
   defp create_header(%Caps{channels: channels, sample_rate: sample_rate, format: format}) do
     {_signedness, bits_per_sample, _endianness} = Format.to_tuple(format)
 
-    format_chunk_length = 16
-    audio_format = 1
     data_transmission_rate = ceil(channels * sample_rate * bits_per_sample / 8)
     block_alignment_unit = ceil(channels * bits_per_sample / 8)
 
@@ -83,8 +84,8 @@ defmodule Membrane.WAV.Serializer do
       @file_length::32-little,
       "WAVE",
       "fmt ",
-      format_chunk_length::32-little,
-      audio_format::16-little,
+      @format_chunk_length::32-little,
+      @audio_format::16-little,
       channels::16-little,
       sample_rate::32-little,
       data_transmission_rate::32-little,
@@ -94,6 +95,6 @@ defmodule Membrane.WAV.Serializer do
       @data_length::32-little
     >>
 
-    %Buffer{payload: header}
+    header
   end
 end
