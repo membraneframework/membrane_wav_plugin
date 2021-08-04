@@ -37,7 +37,7 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{})
+      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_created: false})
 
       assert {:ok,
               caps: _caps,
@@ -68,7 +68,7 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{})
+      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_created: false})
 
       assert {:ok,
               caps: _caps,

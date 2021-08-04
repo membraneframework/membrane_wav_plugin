@@ -11,6 +11,7 @@ defmodule Membrane.WAV.Serializer do
   buffer when demand unit on the output is `:buffers`. One frame contains `bits per sample` x
   `number of channels` bits.
   """
+
   use Membrane.Filter
 
   alias Membrane.Buffer
@@ -36,7 +37,7 @@ defmodule Membrane.WAV.Serializer do
   def_output_pad :output,
     mode: :pull,
     availability: :always,
-    caps: Caps
+    caps: :any
 
   def_input_pad :input,
     mode: :pull,
@@ -45,8 +46,11 @@ defmodule Membrane.WAV.Serializer do
     caps: Caps
 
   @impl true
-  def handle_init(state) do
-    state = Map.put(state, :header_created, false)
+  def handle_init(options) do
+    state =
+      options
+      |> Map.from_struct()
+      |> Map.put(:header_created, false)
 
     {:ok, state}
   end
@@ -54,7 +58,7 @@ defmodule Membrane.WAV.Serializer do
   @impl true
   def handle_caps(:input, caps, _context, state) do
     buffer = %Buffer{payload: create_header(caps)}
-    state = Map.merge(state, %{header_created: true, caps: caps})
+    state = %{state | header_created: true}
 
     {{:ok, caps: {:output, caps}, buffer: {:output, buffer}, redemand: :output}, state}
   end
@@ -72,17 +76,22 @@ defmodule Membrane.WAV.Serializer do
         :output,
         buffers_count,
         :buffers,
-        _context,
-        %{header_created: true, frames_per_buffer: frames, caps: caps} = state
+        context,
+        %{header_created: true, frames_per_buffer: frames} = state
       ) do
+    caps = context.pads.output.caps
     size = buffers_count * Caps.frames_to_bytes(frames, caps)
 
     {{:ok, demand: {:input, size}}, state}
   end
 
   @impl true
-  def handle_process(:input, buffer, _context, state) do
+  def handle_process(:input, buffer, _context, %{header_created: true} = state) do
     {{:ok, buffer: {:output, buffer}}, state}
+  end
+
+  def handle_process(:input, _buffer, _context, %{header_created: false}) do
+    raise(RuntimeError, "buffer received before caps, so the header is not created yet")
   end
 
   defp create_header(%Caps{channels: channels, sample_rate: sample_rate, format: format}) do
@@ -91,7 +100,7 @@ defmodule Membrane.WAV.Serializer do
     data_transmission_rate = ceil(channels * sample_rate * bits_per_sample / 8)
     block_alignment_unit = ceil(channels * bits_per_sample / 8)
 
-    header = <<
+    <<
       "RIFF",
       @file_length::32-little,
       "WAVE",
@@ -106,7 +115,5 @@ defmodule Membrane.WAV.Serializer do
       "data",
       @data_length::32-little
     >>
-
-    header
   end
 end

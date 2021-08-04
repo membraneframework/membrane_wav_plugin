@@ -4,7 +4,7 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_wav_plugin)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_wav_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_wav_plugin)
 
-Plugin providing elements for managing WAV format.
+Plugin providing elements handling audio in WAV file format.
 
 It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
