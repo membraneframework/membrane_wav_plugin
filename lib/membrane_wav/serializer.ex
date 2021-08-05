@@ -5,7 +5,7 @@ defmodule Membrane.WAV.Serializer do
   Creates WAV header (its description can be found with `Membrane.WAV.Parser`) from received caps
   and puts it before audio samples. The element assumes that audio is in PCM format. `File length`
   and `data length` can be calculated only after processing all samples, so these values are
-  invalid (always set to 0).
+  invalid (always set to 0). Use `Membrane.WAV.Postprocessing` module to fix them.
 
   The element has one option - `frames_per_buffer`. User can specify number of frames sent in one
   buffer when demand unit on the output is `:buffers`. One frame contains `bits per sample` x
