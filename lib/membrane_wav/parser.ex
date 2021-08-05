@@ -90,11 +90,14 @@ defmodule Membrane.WAV.Parser do
     mode: :pull,
     availability: :always,
     demand_unit: :bytes,
-    caps: Caps
+    caps: :any
 
   @impl true
-  def handle_init(state) do
-    state = Map.merge(state, %{stage: :init})
+  def handle_init(options) do
+    state =
+      options
+      |> Map.from_struct()
+      |> Map.put(:stage, :init)
 
     {:ok, state}
   end
