@@ -4,7 +4,7 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_wav_plugin)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_wav_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_wav_plugin)
 
-This repository provides WAV Parser.
+Plugin providing elements handling audio in WAV file format.
 
 It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
@@ -32,6 +32,10 @@ Parsing steps:
 
 It can parse only uncompressed audio.
 
+## Serializer
+
+The Serializer adds WAV header to the raw audio in uncompressed, PCM format.
+
 ## Sample usage
 
 ```elixir
@@ -47,14 +51,16 @@ defmodule Mixing.Pipeline do
         input_caps: %Membrane.Caps.Audio.Raw{channels: 1, sample_rate: 16_000, format: :s16le},
         output_caps: %Membrane.Caps.Audio.Raw{channels: 2, sample_rate: 48_000, format: :s16le}
       },
-      player: Membrane.PortAudio.Sink
+      serializer: Membrane.WAV.Serializer,
+      file_sink: %Membrane.File.Sink{location: "/tmp/output.wav"},
     ]
 
     links = [
       link(:file_src)
       |> to(:parser)
       |> to(:converter)
-      |> to(:player)
+      |> to(:serializer)
+      |> to(:file_sink)
     ]
 
     {{:ok, spec: %ParentSpec{children: children, links: links}}, %{}}
