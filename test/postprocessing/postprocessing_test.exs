@@ -12,34 +12,42 @@ defmodule Membrane.WAV.PostprocessingTest do
   @reference_path Path.expand("../fixtures/reference_processed.wav", __DIR__)
   @output_path Path.expand("../fixtures/output.wav", __DIR__)
 
-  test "correct_wav_header/1 should perform proper postprocessing" do
-    on_exit(fn -> File.rm(@output_path) end)
+  @invalid_header Path.expand("../fixtures/invalid_header.wav", __DIR__)
 
-    elements = [
-      file_src: %Source{location: @input_path},
-      parser: Parser,
-      serializer: Serializer,
-      file_sink: %Sink{location: @output_path}
-    ]
+  describe "fix_wav_header/1 should" do
+    test "perform proper postprocessing" do
+      on_exit(fn -> File.rm(@output_path) end)
 
-    links = [
-      link(:file_src)
-      |> to(:parser)
-      |> to(:serializer)
-      |> to(:file_sink)
-    ]
+      elements = [
+        file_src: %Source{location: @input_path},
+        parser: Parser,
+        serializer: Serializer,
+        file_sink: %Sink{location: @output_path}
+      ]
 
-    pipeline_options = %Pipeline.Options{elements: elements, links: links}
-    assert {:ok, pid} = Pipeline.start_link(pipeline_options)
-    assert Pipeline.play(pid) == :ok
-    assert_end_of_stream(pid, :file_sink, :input, 2_000)
-    Pipeline.stop_and_terminate(pid, blocking?: true)
+      links = [
+        link(:file_src)
+        |> to(:parser)
+        |> to(:serializer)
+        |> to(:file_sink)
+      ]
 
-    assert :ok = Postprocessing.correct_wav_header(@output_path)
+      pipeline_options = %Pipeline.Options{elements: elements, links: links}
+      assert {:ok, pid} = Pipeline.start_link(pipeline_options)
+      assert Pipeline.play(pid) == :ok
+      assert_end_of_stream(pid, :file_sink, :input, 2_000)
+      Pipeline.stop_and_terminate(pid, blocking?: true)
 
-    {:ok, processed} = File.read(@output_path)
-    {:ok, reference} = File.read(@reference_path)
+      assert :ok = Postprocessing.fix_wav_header(@output_path)
 
-    assert processed == reference
+      {:ok, processed} = File.read(@output_path)
+      {:ok, reference} = File.read(@reference_path)
+
+      assert processed == reference
+    end
+
+    test "return error in case of invalid header" do
+      assert {:error, :invalid_file} = Postprocessing.fix_wav_header(@invalid_header)
+    end
   end
 end
