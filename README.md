@@ -36,6 +36,11 @@ It can parse only uncompressed audio.
 
 The Serializer adds WAV header to the raw audio in uncompressed, PCM format.
 
+### Warning
+
+The Serializer creates header with invalid blocks which depend on the file size. To fix that, using
+`Membrane.WAV.Postprocessing` is recommended.
+
 ## Sample usage
 
 ```elixir
