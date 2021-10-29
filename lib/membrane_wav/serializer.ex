@@ -17,6 +17,7 @@ defmodule Membrane.WAV.Serializer do
   alias Membrane.Buffer
   alias Membrane.Caps.Audio.Raw, as: Caps
   alias Membrane.Caps.Audio.Raw.Format
+  alias Membrane.WAV.Common
 
   @file_length 0
   @data_length 0
@@ -80,9 +81,8 @@ defmodule Membrane.WAV.Serializer do
         %{header_created: true, frames_per_buffer: frames} = state
       ) do
     caps = context.pads.output.caps
-    size = buffers_count * Caps.frames_to_bytes(frames, caps)
-
-    {{:ok, demand: {:input, size}}, state}
+    demands = Common.convert_to_demand_in_bytes(buffers_count, frames, caps)
+    {{:ok, demands}, state}
   end
 
   @impl true

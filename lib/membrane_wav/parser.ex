@@ -62,6 +62,7 @@ defmodule Membrane.WAV.Parser do
   alias Membrane.Buffer
   alias Membrane.Caps.Audio.Raw, as: Caps
   alias Membrane.Caps.Audio.Raw.Format
+  alias Membrane.WAV.Common
 
   require Membrane.Logger
 
@@ -121,9 +122,8 @@ defmodule Membrane.WAV.Parser do
         _context,
         %{stage: :data, frames_per_buffer: frames, caps: caps} = state
       ) do
-    size = buffers_count * Caps.frames_to_bytes(frames, caps)
-
-    {{:ok, demand: {:input, size}}, state}
+    demands = Common.convert_to_demand_in_bytes(buffers_count, frames, caps)
+    {{:ok, demands}, state}
   end
 
   def handle_demand(:output, _size, _unit, _context, state) do
