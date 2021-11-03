@@ -15,7 +15,7 @@ The package can be installed by adding `membrane_wav_plugin` to your list of dep
 ```elixir
 def deps do
   [
-    {:membrane_wav_plugin, "~> 0.2.0-alpha"}
+    {:membrane_wav_plugin, "~> 0.2.1-alpha"}
   ]
 end
 ```
@@ -26,6 +26,7 @@ The Parser requires a WAV file on the input and provides a raw audio in uncompre
 the output.
 
 Parsing steps:
+
 - Reading WAV header
 - Extracting audio metadata and sending it through caps to the next element
 - Sending only audio samples to the next elements
