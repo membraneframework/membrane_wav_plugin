@@ -20,9 +20,8 @@ defmodule Membrane.WAV.Postprocessing do
          {:ok, file} <- File.open(path, [:binary, :read, :write]),
          {:ok, header_length} <- get_header_length(file),
          data_length = file_length - header_length,
-         :ok <- update_file(file, file_length, header_length, data_length),
-         :ok <- File.close(file) do
-      :ok
+         :ok <- update_file(file, file_length, header_length, data_length) do
+      File.close(file)
     end
   end
 
@@ -68,9 +67,8 @@ defmodule Membrane.WAV.Postprocessing do
   defp update_file(file, file_length, header_length, data_length) do
     with {:ok, _new_position} <- :file.position(file, 4),
          :ok <- IO.binwrite(file, <<file_length - 8::32-little>>),
-         {:ok, _new_position} <- :file.position(file, header_length - 4),
-         :ok <- IO.binwrite(file, <<data_length::32-little>>) do
-      :ok
+         {:ok, _new_position} <- :file.position(file, header_length - 4) do
+      IO.binwrite(file, <<data_length::32-little>>)
     end
   end
 end

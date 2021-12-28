@@ -31,13 +31,13 @@ defmodule Membrane.WAV.Plugin.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.7.0"},
-      {:membrane_caps_audio_raw, "~> 0.4.0"},
-      {:ex_doc, "~> 0.24", only: :dev, runtime: false},
+      {:membrane_core, "~> 0.8.1"},
+      {:membrane_caps_audio_raw, "~> 0.5.0"},
+      {:ex_doc, "~> 0.26", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-      {:credo, "~> 1.5", only: :dev, runtime: false},
-      {:membrane_file_plugin, "~> 0.6.0", only: :test},
-      {:membrane_ffmpeg_swresample_plugin, "~> 0.7.0", only: :test}
+      {:credo, "~> 1.6", only: :dev, runtime: false},
+      {:membrane_file_plugin, "~> 0.7.0", only: :test},
+      {:membrane_ffmpeg_swresample_plugin, "~> 0.10.0", only: :test}
     ]
   end
 
