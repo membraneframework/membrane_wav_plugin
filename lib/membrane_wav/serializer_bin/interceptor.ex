@@ -35,8 +35,8 @@ defmodule Membrane.WAV.SerializerBin.Interceptor do
     {{:ok, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
-  def handle_process(:input, buffer, _context, state) do
-    state = Map.put(state, :data_length, state.data_length + byte_size(buffer.payload))
+  def handle_process(:input, buffer, _context, %{data_length: data_length} = state) do
+    state = Map.put(state, :data_length, data_length + byte_size(buffer.payload))
     {{:ok, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
@@ -50,7 +50,7 @@ defmodule Membrane.WAV.SerializerBin.Interceptor do
 
     actions = [
       event: {:output, %File.SeekEvent{position: @file_length_offset}},
-      buffer: {:output, %Buffer{payload: <<file_length::32-little>>}},
+      buffer: {:output, %Buffer{payload: <<file_length - 8::32-little>>}},
       event: {:output, %File.SeekEvent{position: @data_length_offset}},
       buffer: {:output, %Buffer{payload: <<data_length::32-little>>}},
       end_of_stream: :output
