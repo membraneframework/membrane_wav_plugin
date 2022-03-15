@@ -103,13 +103,19 @@ defmodule Membrane.WAV.Serializer do
   end
 
   @impl true
-  def handle_process(:input, _buffer, _context, %{header_length: 0}) do
-    raise(RuntimeError, "buffer received before caps, so the header is not created yet")
+  def handle_process_list(:input, _buffers, _context, %{header_length: 0}) do
+    raise(RuntimeError, "buffers received before caps, so the header is not created yet")
   end
 
-  def handle_process(:input, buffer, _context, %{data_length: data_length} = state) do
-    state = Map.put(state, :data_length, data_length + byte_size(buffer.payload))
-    {{:ok, buffer: {:output, buffer}, redemand: :output}, state}
+  def handle_process_list(:input, buffers, _context, %{data_length: data_length} = state) do
+    state =
+      buffers
+      |> Enum.reduce(data_length, fn %Buffer{payload: payload}, acc ->
+        acc + byte_size(payload)
+      end)
+      |> then(&Map.put(state, :data_length, &1))
+
+    {{:ok, buffer: {:output, [buffers]}, redemand: :output}, state}
   end
 
   @impl true
