@@ -12,6 +12,7 @@ defmodule Membrane.WAV.SerializerTest do
 
   @input_path Path.expand("../fixtures/input.wav", __DIR__)
   @reference_path Path.expand("../fixtures/reference.wav", __DIR__)
+  @processed_path Path.expand("../fixtures/reference_processed.wav", __DIR__)
 
   describe "Serializer should" do
     test "create header properly for one channel" do
@@ -37,7 +38,7 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_created: false})
+      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_length: 0})
 
       assert {:ok,
               caps: _caps,
@@ -68,7 +69,7 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_created: false})
+      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_length: 0})
 
       assert {:ok,
               caps: _caps,
@@ -80,7 +81,7 @@ defmodule Membrane.WAV.SerializerTest do
       elements = [
         file_src: %Membrane.File.Source{location: @input_path},
         parser: Membrane.WAV.Parser,
-        serializer: Membrane.WAV.Serializer,
+        serializer: @module,
         sink: Membrane.Testing.Sink
       ]
 
@@ -100,6 +101,39 @@ defmodule Membrane.WAV.SerializerTest do
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^header})
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^payload})
       Pipeline.stop_and_terminate(pid, blocking?: true)
+    end
+
+    @tag :tmp_dir
+    test "create valid file when `update_header?` = `true`", %{tmp_dir: tmp_dir} do
+      on_exit(fn -> File.rm_rf!("tmp") end)
+      output_path = Path.join([tmp_dir, "output.wav"])
+
+      elements = [
+        file_src: %Membrane.File.Source{location: @input_path},
+        parser: Membrane.WAV.Parser,
+        serializer: %@module{update_header?: true},
+        file_sink: %Membrane.File.Sink{location: output_path}
+      ]
+
+      links = [
+        link(:file_src)
+        |> to(:parser)
+        |> to(:serializer)
+        |> to(:file_sink)
+      ]
+
+      options = %Pipeline.Options{elements: elements, links: links}
+
+      {:ok, pid} = Pipeline.start_link(options)
+      :ok = Pipeline.play(pid)
+
+      assert_end_of_stream(pid, :file_sink)
+      assert :ok == Pipeline.stop_and_terminate(pid, blocking?: true)
+
+      {:ok, output} = File.read(output_path)
+      {:ok, reference} = File.read(@processed_path)
+
+      assert output == reference
     end
   end
 end

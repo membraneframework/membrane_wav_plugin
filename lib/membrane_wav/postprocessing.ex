@@ -66,6 +66,7 @@ defmodule Membrane.WAV.Postprocessing do
 
   defp update_file(file, file_length, header_length, data_length) do
     with {:ok, _new_position} <- :file.position(file, 4),
+         # subtracting 8 bytes as `file_length` field doesn't include "RIFF" header and the field itself
          :ok <- IO.binwrite(file, <<file_length - 8::32-little>>),
          {:ok, _new_position} <- :file.position(file, header_length - 4) do
       IO.binwrite(file, <<data_length::32-little>>)

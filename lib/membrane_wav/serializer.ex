@@ -5,7 +5,7 @@ defmodule Membrane.WAV.Serializer do
   Creates WAV header (its description can be found with `Membrane.WAV.Parser`) from received caps
   and puts it before audio samples. The element assumes that audio is in PCM format. `File length`
   and `data length` can be calculated only after processing all samples, so these values are
-  invalid (always set to 0). Use `Membrane.WAV.SerializerBin` to avoid this problem, or
+  invalid (always set to 0). Save the file using `Membrane.File.Sink` to avoid this problem, or
   `Membrane.WAV.Postprocessing.fix_wav_header/1` module to fix it afterwards.
 
   The element has one option - `frames_per_buffer`. User can specify number of frames sent in one
@@ -25,6 +25,9 @@ defmodule Membrane.WAV.Serializer do
   @audio_format 1
   @format_chunk_length 16
 
+  @file_length_offset 4
+  @data_length_offset 40
+
   def_options frames_per_buffer: [
                 type: :integer,
                 spec: pos_integer(),
@@ -33,6 +36,18 @@ defmodule Membrane.WAV.Serializer do
                 Used when converting demand from buffers into bytes.
                 """,
                 default: 2048
+              ],
+              update_header?: [
+                spec: boolean(),
+                description: """
+                Whether the element should use `Membrane.File.SeekEvent` to update the
+                WAV header with valid information. Requires dependency on `Membrane.File`.
+
+                If your pipeline can't output the file by `Membrane.File.Sink`, it is
+                recommended to turn this option off and use `Membrane.WAV.Postprocessing`
+                to fix the header afterwards.
+                """,
+                default: true
               ]
 
   def_output_pad :output,
@@ -51,7 +66,10 @@ defmodule Membrane.WAV.Serializer do
     state =
       options
       |> Map.from_struct()
-      |> Map.put(:header_created, false)
+      |> Map.merge(%{
+        header_length: 0,
+        data_length: 0
+      })
 
     {:ok, state}
   end
@@ -59,17 +77,16 @@ defmodule Membrane.WAV.Serializer do
   @impl true
   def handle_caps(:input, caps, _context, state) do
     buffer = %Buffer{payload: create_header(caps)}
-    state = %{state | header_created: true}
-
+    state = %{state | header_length: byte_size(buffer.payload)}
     {{:ok, caps: {:output, caps}, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
   @impl true
-  def handle_demand(:output, _size, _unit, _context, %{header_created: false} = state) do
+  def handle_demand(:output, _size, _unit, _context, %{header_length: 0} = state) do
     {:ok, state}
   end
 
-  def handle_demand(:output, size, :bytes, _context, %{header_created: true} = state) do
+  def handle_demand(:output, size, :bytes, _context, state) do
     {{:ok, demand: {:input, size}}, state}
   end
 
@@ -78,7 +95,7 @@ defmodule Membrane.WAV.Serializer do
         buffers_count,
         :buffers,
         context,
-        %{header_created: true, frames_per_buffer: frames} = state
+        %{frames_per_buffer: frames} = state
       ) do
     caps = context.pads.output.caps
     demand_size = Caps.frames_to_bytes(frames, caps) * buffers_count
@@ -86,12 +103,19 @@ defmodule Membrane.WAV.Serializer do
   end
 
   @impl true
-  def handle_process(:input, buffer, _context, %{header_created: true} = state) do
+  def handle_process(:input, _buffer, _context, %{header_length: 0}) do
+    raise(RuntimeError, "buffer received before caps, so the header is not created yet")
+  end
+
+  def handle_process(:input, buffer, _context, %{data_length: data_length} = state) do
+    state = Map.put(state, :data_length, data_length + byte_size(buffer.payload))
     {{:ok, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
-  def handle_process(:input, _buffer, _context, %{header_created: false}) do
-    raise(RuntimeError, "buffer received before caps, so the header is not created yet")
+  @impl true
+  def handle_end_of_stream(:input, _context, state) do
+    actions = maybe_update_header_actions(state) ++ [end_of_stream: :output]
+    {{:ok, actions}, state}
   end
 
   defp create_header(%Caps{channels: channels, sample_rate: sample_rate, format: format}) do
@@ -115,5 +139,33 @@ defmodule Membrane.WAV.Serializer do
       "data",
       @data_length::32-little
     >>
+  end
+
+  defp maybe_update_header_actions(%{update_header?: false}), do: []
+
+  defp maybe_update_header_actions(%{header_length: header_length, data_length: data_length}) do
+    case Code.ensure_compiled(Membrane.File.SeekEvent) do
+      {:module, seek_event} ->
+        # subtracting 8 bytes as `file_length` field doesn't include "RIFF" header and the field itself
+        file_length = header_length + data_length - 8
+
+        [
+          event: {:output, struct!(seek_event, position: @file_length_offset)},
+          buffer: {:output, %Buffer{payload: <<file_length::32-little>>}},
+          event: {:output, struct!(seek_event, position: @data_length_offset)},
+          buffer: {:output, %Buffer{payload: <<data_length::32-little>>}}
+        ]
+
+      {:error, reason} ->
+        require Membrane.Logger
+
+        Membrane.Logger.warn("""
+        Couldn't update WAV header as `Membrane.File.SeekEvent` module is not available (reason: #{inspect(reason)}).
+        You can use `Membrane.File.Sink` in your pipeline to correctly save the file or fix it later using
+        `Membrane.WAV.Postprocessing`.
+        """)
+
+        []
+    end
   end
 end

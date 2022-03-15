@@ -40,12 +40,8 @@ The Serializer adds WAV header to the raw audio in uncompressed, PCM format.
 ### Warning
 
 The Serializer creates header with invalid blocks which depend on the file size. You can bypass this 
-using `Membrane.WAV.SerializerBin` or fix the header with `Membrane.WAV.Postprocessing`.
-
-## SerializerBin
-
-The SerializerBin works like Serializer, but writes its output directly to a file, taking care of 
-updating the header.
+using `Membrane.File.Sink` to save the file or fixing the header afterwards with `Membrane.WAV.Postprocessing`
+if you need to use any other sink.
 
 ## Sample usage
 
