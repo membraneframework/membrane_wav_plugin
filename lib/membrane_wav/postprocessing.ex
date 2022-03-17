@@ -2,9 +2,9 @@ defmodule Membrane.WAV.Postprocessing do
   @moduledoc """
   Module responsible for post-processing serialized WAV files.
 
-  Due to the fact that `Membrane.WAV.Serializer` creates WAV file with incorrect `file length` and
-  `data length` blocks in the header, post-processing is needed. `fix_wav_header/1` fixes that
-  problem.
+  Due to the fact that `Membrane.WAV.Serializer` with seeking disabled creates WAV file with
+  incorrect `file length` and `data length` blocks in the header, post-processing is needed.
+  `fix_wav_header/1` fixes that problem.
 
   Header description can be found in `Membrane.WAV.Parser`.
   """
@@ -66,7 +66,7 @@ defmodule Membrane.WAV.Postprocessing do
 
   defp update_file(file, file_length, header_length, data_length) do
     with {:ok, _new_position} <- :file.position(file, 4),
-         # subtracting 8 bytes as `file_length` field doesn't include "RIFF" header and the field itself
+         # subtracting 8 bytes as `file_length` doesn't include "RIFF" header and the field itself
          :ok <- IO.binwrite(file, <<file_length - 8::32-little>>),
          {:ok, _new_position} <- :file.position(file, header_length - 4) do
       IO.binwrite(file, <<data_length::32-little>>)

@@ -3,14 +3,16 @@ defmodule Membrane.WAV.Serializer do
   Element responsible for raw audio serialization to WAV format.
 
   Creates WAV header (its description can be found with `Membrane.WAV.Parser`) from received caps
-  and puts it before audio samples. The element assumes that audio is in PCM format. `File length`
-  and `data length` can be calculated only after processing all samples, so these values are
-  invalid (always set to 0). Save the file using `Membrane.File.Sink` to avoid this problem, or
-  `Membrane.WAV.Postprocessing.fix_wav_header/1` module to fix it afterwards.
+  and puts it before audio samples. The element assumes that audio is in PCM format.
 
-  The element has one option - `frames_per_buffer`. User can specify number of frames sent in one
-  buffer when demand unit on the output is `:buffers`. One frame contains `bits per sample` x
-  `number of channels` bits.
+  `file length` and `data length` fields can be calculated only after processing all samples, so
+  the serializer uses `Membrane.File.SeekEvent` to supply them with proper values before the end
+  of stream. If your sink doesn't support seeking, set `disable_seeking` option to `true` and fix
+  the header using `Membrane.WAV.Postprocessing`.
+
+  The option `frames_per_buffer` makes it possible to specify number of frames sent in one
+  buffer when demand unit on the output is `:buffers`. One frame contains
+  `bits per sample * number of channels` bits.
   """
 
   use Membrane.Filter
@@ -37,17 +39,16 @@ defmodule Membrane.WAV.Serializer do
                 """,
                 default: 2048
               ],
-              update_header?: [
+              disable_seeking: [
                 spec: boolean(),
                 description: """
-                Whether the element should use `Membrane.File.SeekEvent` to update the
-                WAV header with valid information. Requires dependency on `Membrane.File`.
+                Whether the element should disable emitting `Membrane.File.SeekEvent`.
 
-                If your pipeline can't output the file by `Membrane.File.Sink`, it is
-                recommended to turn this option off and use `Membrane.WAV.Postprocessing`
-                to fix the header afterwards.
+                The event is used to supply the WAV header with proper values before
+                the end of stream. If your sink doesn't support it, you should set this
+                option to `true` and use `Membrane.WAV.Postprocessing` to fix the header.
                 """,
-                default: true
+                default: false
               ]
 
   def_output_pad :output,
@@ -77,7 +78,9 @@ defmodule Membrane.WAV.Serializer do
   @impl true
   def handle_caps(:input, caps, _context, state) do
     buffer = %Buffer{payload: create_header(caps)}
-    state = %{state | header_length: byte_size(buffer.payload)}
+    # subtracting 8 bytes as header length doesn't include "RIFF" and `file_length` fields
+    state = Map.put(state, :header_length, byte_size(buffer.payload) - 8)
+
     {{:ok, caps: {:output, caps}, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
@@ -99,6 +102,7 @@ defmodule Membrane.WAV.Serializer do
       ) do
     caps = context.pads.output.caps
     demand_size = Caps.frames_to_bytes(frames, caps) * buffers_count
+
     {{:ok, demand: {:input, demand_size}}, state}
   end
 
@@ -109,12 +113,11 @@ defmodule Membrane.WAV.Serializer do
 
   def handle_process_list(:input, buffers, _context, %{data_length: data_length} = state) do
     data_length =
-      buffers
-      |> Enum.reduce(data_length, fn %Buffer{payload: payload}, acc ->
+      Enum.reduce(buffers, data_length, fn %Buffer{payload: payload}, acc ->
         acc + byte_size(payload)
       end)
-    
-    state = %{state | data_length: data_length}
+
+    state = Map.put(state, :data_length, data_length)
 
     {{:ok, buffer: {:output, buffers}, redemand: :output}, state}
   end
@@ -148,31 +151,30 @@ defmodule Membrane.WAV.Serializer do
     >>
   end
 
-  defp maybe_update_header_actions(%{update_header?: false}), do: []
+  defp maybe_update_header_actions(%{disable_seeking: true}), do: []
 
-  defp maybe_update_header_actions(%{header_length: header_length, data_length: data_length}) do
-    case Code.ensure_compiled(Membrane.File.SeekEvent) do
-      {:module, seek_event} ->
-        # subtracting 8 bytes as `file_length` field doesn't include "RIFF" header and the field itself
-        file_length = header_length + data_length - 8
+  if Code.ensure_loaded?(Membrane.File.SeekEvent) do
+    defp maybe_update_header_actions(%{
+           disable_seeking: false,
+           header_length: header_length,
+           data_length: data_length
+         }) do
+      file_length = header_length + data_length
 
-        [
-          event: {:output, struct!(seek_event, position: @file_length_offset)},
-          buffer: {:output, %Buffer{payload: <<file_length::32-little>>}},
-          event: {:output, struct!(seek_event, position: @data_length_offset)},
-          buffer: {:output, %Buffer{payload: <<data_length::32-little>>}}
-        ]
-
-      {:error, reason} ->
-        require Membrane.Logger
-
-        Membrane.Logger.warn("""
-        Couldn't update WAV header as `Membrane.File.SeekEvent` module is not available (reason: #{inspect(reason)}).
-        You can use `Membrane.File.Sink` in your pipeline to correctly save the file or fix it later using
-        `Membrane.WAV.Postprocessing`.
-        """)
-
-        []
+      [
+        event: {:output, %Membrane.File.SeekEvent{position: @file_length_offset}},
+        buffer: {:output, %Buffer{payload: <<file_length::32-little>>}},
+        event: {:output, %Membrane.File.SeekEvent{position: @data_length_offset}},
+        buffer: {:output, %Buffer{payload: <<data_length::32-little>>}}
+      ]
+    end
+  else
+    defp maybe_update_header_actions(%{disable_seeking: false}) do
+      raise """
+      Unable to update WAV header as `Membrane.File.SeekEvent` module is not available.
+      Set `disable_seeking` option to `true` and fix the header using `Membrane.WAV.Postprocessing`
+      or use a sink that supports seeking (e.g. `Membrane.File.Sink`).
+      """
     end
   end
 end

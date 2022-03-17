@@ -77,11 +77,13 @@ defmodule Membrane.WAV.SerializerTest do
               redemand: :output} = actions
     end
 
-    test "work with Parser" do
+    test "work when seeking is disabled" do
+      {:ok, <<header::44-bytes, payload::8-bytes>>} = File.read(@reference_path)
+
       elements = [
         file_src: %Membrane.File.Source{location: @input_path},
         parser: Membrane.WAV.Parser,
-        serializer: @module,
+        serializer: %@module{disable_seeking: true},
         sink: Membrane.Testing.Sink
       ]
 
@@ -92,26 +94,28 @@ defmodule Membrane.WAV.SerializerTest do
         |> to(:sink)
       ]
 
-      pipeline_options = %Pipeline.Options{elements: elements, links: links}
-      assert {:ok, pid} = Pipeline.start_link(pipeline_options)
+      options = %Pipeline.Options{elements: elements, links: links}
 
-      {:ok, <<header::44-bytes, payload::8-bytes>>} = File.read(@reference_path)
+      {:ok, pid} = Pipeline.start_link(options)
+      :ok = Pipeline.play(pid)
 
-      assert Pipeline.play(pid) == :ok
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^header})
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^payload})
+      refute_sink_event(pid, :sink, %Membrane.File.SeekEvent{})
+      assert_end_of_stream(pid, :sink)
+
       Pipeline.stop_and_terminate(pid, blocking?: true)
     end
 
     @tag :tmp_dir
-    test "create valid file when `update_header?` = `true`", %{tmp_dir: tmp_dir} do
+    test "create valid file when seeking is enabled", %{tmp_dir: tmp_dir} do
       on_exit(fn -> File.rm_rf!("tmp") end)
       output_path = Path.join([tmp_dir, "output.wav"])
 
       elements = [
         file_src: %Membrane.File.Source{location: @input_path},
         parser: Membrane.WAV.Parser,
-        serializer: %@module{update_header?: true},
+        serializer: %@module{disable_seeking: false},
         file_sink: %Membrane.File.Sink{location: output_path}
       ]
 
