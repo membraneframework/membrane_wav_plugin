@@ -154,11 +154,7 @@ defmodule Membrane.WAV.Serializer do
   defp maybe_update_header_actions(%{disable_seeking: true}), do: []
 
   if Code.ensure_loaded?(Membrane.File.SeekEvent) do
-    defp maybe_update_header_actions(%{
-           disable_seeking: false,
-           header_length: header_length,
-           data_length: data_length
-         }) do
+    defp maybe_update_header_actions(%{header_length: header_length, data_length: data_length}) do
       file_length = header_length + data_length
 
       [
@@ -169,7 +165,7 @@ defmodule Membrane.WAV.Serializer do
       ]
     end
   else
-    defp maybe_update_header_actions(%{disable_seeking: false}) do
+    defp maybe_update_header_actions(_state) do
       raise """
       Unable to update WAV header as `Membrane.File.SeekEvent` module is not available.
       Set `disable_seeking` option to `true` and fix the header using `Membrane.WAV.Postprocessing`
