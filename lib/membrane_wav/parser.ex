@@ -6,9 +6,9 @@ defmodule Membrane.WAV.Parser do
   provides raw audio on the output. WAV header is parsed to extract metadata for creating caps.
   Then it is dropped and only samples are sent to the next element.
 
-  The element has one option - `frames_per_buffer`. User can specify number of frames sent in one
-  buffer when demand unit on the output is `:buffers`. One frame contains `bits per sample` x
-  `number of channels` bits.
+  The element has one option - `frames_per_buffer`. User can specify number of frames sent in
+  one buffer when demand unit on the output is `:buffers`. One frame contains
+  `bits per sample * number of channels` bits.
 
   ## WAV Header
 
