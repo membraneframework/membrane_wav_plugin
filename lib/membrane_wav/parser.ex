@@ -48,7 +48,7 @@ defmodule Membrane.WAV.Parser do
     length than 16 (for PCM). After parsing, the stage is set to `:format`.
   - `:format` - Parser waits for the next 22 bytes - `fmt` chunk (bytes 20 - 35) without
     `format` and either `"fact"` and `fact chunk length` or `"data"` and `data length in bytes`.
-    Then it parses it and create `Membrane.Caps.Audio.Raw` struct with audio format to send it
+    Then it parses it and create `Membrane.RawAudio` struct with audio format to send it
     as caps to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
   - `:fact` - Parser waits for `8 + fact chunk length` bytes. It  parses them only to check if
     the header is correct, but does not use that data in any way. After parsing, the stage is
