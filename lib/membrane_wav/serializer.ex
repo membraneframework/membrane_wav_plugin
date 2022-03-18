@@ -17,9 +17,7 @@ defmodule Membrane.WAV.Serializer do
 
   use Membrane.Filter
 
-  alias Membrane.Buffer
-  alias Membrane.Caps.Audio.Raw, as: Caps
-  alias Membrane.Caps.Audio.Raw.Format
+  alias Membrane.{Buffer, RawAudio}
 
   @file_length 0
   @data_length 0
@@ -60,7 +58,7 @@ defmodule Membrane.WAV.Serializer do
     mode: :pull,
     availability: :always,
     demand_unit: :bytes,
-    caps: Caps
+    caps: RawAudio
 
   @impl true
   def handle_init(options) do
@@ -101,7 +99,7 @@ defmodule Membrane.WAV.Serializer do
         %{frames_per_buffer: frames} = state
       ) do
     caps = context.pads.output.caps
-    demand_size = Caps.frames_to_bytes(frames, caps) * buffers_count
+    demand_size = RawAudio.frames_to_bytes(frames, caps) * buffers_count
 
     {{:ok, demand: {:input, demand_size}}, state}
   end
@@ -128,8 +126,12 @@ defmodule Membrane.WAV.Serializer do
     {{:ok, actions}, state}
   end
 
-  defp create_header(%Caps{channels: channels, sample_rate: sample_rate, format: format}) do
-    {_signedness, bits_per_sample, _endianness} = Format.to_tuple(format)
+  defp create_header(%RawAudio{
+         channels: channels,
+         sample_rate: sample_rate,
+         sample_format: format
+       }) do
+    {_signedness, bits_per_sample, _endianness} = RawAudio.SampleFormat.to_tuple(format)
 
     data_transmission_rate = ceil(channels * sample_rate * bits_per_sample / 8)
     block_alignment_unit = ceil(channels * bits_per_sample / 8)

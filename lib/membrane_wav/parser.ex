@@ -59,11 +59,7 @@ defmodule Membrane.WAV.Parser do
 
   use Membrane.Filter
 
-  alias Membrane.Buffer
-  alias Membrane.Caps.Audio.Raw, as: Caps
-  alias Membrane.Caps.Audio.Raw.Format
-
-  require Membrane.Logger
+  alias Membrane.{Buffer, RawAudio}
 
   @pcm_format_size 16
 
@@ -84,7 +80,7 @@ defmodule Membrane.WAV.Parser do
   def_output_pad :output,
     mode: :pull,
     availability: :always,
-    caps: Caps
+    caps: RawAudio
 
   def_input_pad :input,
     mode: :pull,
@@ -121,7 +117,7 @@ defmodule Membrane.WAV.Parser do
         _context,
         %{stage: :data, frames_per_buffer: frames, caps: caps} = state
       ) do
-    demand_size = Caps.frames_to_bytes(frames, caps) * buffers_count
+    demand_size = RawAudio.frames_to_bytes(frames, caps) * buffers_count
     {{:ok, demand: {:input, demand_size}}, state}
   end
 
@@ -173,10 +169,10 @@ defmodule Membrane.WAV.Parser do
       next_chunk_size::32-little
     >> = payload
 
-    caps = %Caps{
+    caps = %RawAudio{
       channels: channels,
       sample_rate: sample_rate,
-      format: Format.from_tuple({:s, bits_per_sample, :le})
+      sample_format: RawAudio.SampleFormat.from_tuple({:s, bits_per_sample, :le})
     }
 
     state = Map.merge(state, %{caps: caps})

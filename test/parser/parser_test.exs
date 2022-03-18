@@ -4,8 +4,7 @@ defmodule Membrane.WAV.ParserTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Buffer
-  alias Membrane.Caps.Audio.Raw, as: Caps
+  alias Membrane.{Buffer, RawAudio}
   alias Membrane.Testing.{Pipeline, Sink}
 
   @module Membrane.WAV.Parser
@@ -33,10 +32,10 @@ defmodule Membrane.WAV.ParserTest do
 
   describe "Parser should" do
     test "parse and send proper caps" do
-      expected_caps = %Caps{
+      expected_caps = %RawAudio{
         channels: 1,
         sample_rate: 16_000,
-        format: :s16le
+        sample_format: :s16le
       }
 
       elements = [
@@ -124,8 +123,8 @@ defmodule Membrane.WAV.ParserTest do
         file_src: %Membrane.File.Source{location: @input_path},
         parser: Membrane.WAV.Parser,
         converter: %Membrane.FFmpeg.SWResample.Converter{
-          input_caps: %Membrane.Caps.Audio.Raw{channels: 1, sample_rate: 16_000, format: :s16le},
-          output_caps: %Membrane.Caps.Audio.Raw{channels: 2, sample_rate: 16_000, format: :s16le}
+          input_caps: %RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
+          output_caps: %RawAudio{channels: 2, sample_rate: 16_000, sample_format: :s16le}
         },
         file_sink: %Membrane.File.Sink{location: output_path}
       ]

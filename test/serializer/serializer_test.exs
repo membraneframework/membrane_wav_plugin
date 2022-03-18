@@ -4,8 +4,7 @@ defmodule Membrane.WAV.SerializerTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Buffer
-  alias Membrane.Caps.Audio.Raw, as: Caps
+  alias Membrane.{Buffer, RawAudio}
   alias Membrane.Testing.Pipeline
 
   @module Membrane.WAV.Serializer
@@ -16,10 +15,10 @@ defmodule Membrane.WAV.SerializerTest do
 
   describe "Serializer should" do
     test "create header properly for one channel" do
-      caps = %Caps{
+      caps = %RawAudio{
         channels: 1,
         sample_rate: 16_000,
-        format: :s16le
+        sample_format: :s16le
       }
 
       reference_header = <<
@@ -47,10 +46,10 @@ defmodule Membrane.WAV.SerializerTest do
     end
 
     test "create header properly for two channels" do
-      caps = %Caps{
+      caps = %RawAudio{
         channels: 2,
         sample_rate: 44_100,
-        format: :s24le
+        sample_format: :s24le
       }
 
       reference_header = <<

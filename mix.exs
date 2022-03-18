@@ -31,20 +31,26 @@ defmodule Membrane.WAV.Plugin.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.8.1"},
-      {:membrane_caps_audio_raw, "~> 0.5.0"},
-      {:membrane_file_plugin, "~> 0.8.0", optional: true},
+      {:membrane_core, "~> 0.9.0"},
+      {:membrane_raw_audio_format, "~> 0.8.0"},
+      {:membrane_file_plugin, "~> 0.9.0", optional: true},
       {:ex_doc, "~> 0.26", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-      {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:membrane_ffmpeg_swresample_plugin, "~> 0.10.0", only: :test}
+      {:dialyxir, "~> 1.1", only: :dev, runtime: false, override: true},
+      # {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:credo, "~> 1.6", only: :dev, runtime: false, override: true},
+      # {:credo, "~> 1.6", only: :dev, runtime: false},
+      {:membrane_ffmpeg_swresample_plugin,
+       github: "membraneframework/membrane_ffmpeg_swresample_plugin",
+       branch: "MS-43-membrane_ffmpeg_swresample_plugin-caps-format",
+       only: :test}
+      # {:membrane_ffmpeg_swresample_plugin, "~> 0.11.0", only: :test}
     ]
   end
 
   defp package do
     [
       maintainers: ["Membrane Team"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @github_url,
         "Membrane Framework Homepage" => "https://membraneframework.org"
