@@ -63,8 +63,6 @@ defmodule Membrane.WAV.Parser do
   alias Membrane.Caps.Audio.Raw, as: Caps
   alias Membrane.Caps.Audio.Raw.Format
 
-  require Membrane.Logger
-
   @pcm_format_size 16
 
   @init_stage_size 22
