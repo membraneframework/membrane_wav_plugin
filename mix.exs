@@ -1,7 +1,7 @@
 defmodule Membrane.WAV.Plugin.Mixfile do
   use Mix.Project
 
-  @version "0.3.0-alpha"
+  @version "0.4.0"
   @github_url "https://github.com/membraneframework/membrane_wav_plugin"
 
   def project do
@@ -31,20 +31,20 @@ defmodule Membrane.WAV.Plugin.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.8.1"},
-      {:membrane_caps_audio_raw, "~> 0.5.0"},
-      {:membrane_file_plugin, "~> 0.8.0", optional: true},
+      {:membrane_core, "~> 0.9.0"},
+      {:membrane_caps_audio_raw, "~> 0.6.1"},
+      {:membrane_file_plugin, "~> 0.9.0", optional: true},
       {:ex_doc, "~> 0.26", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:membrane_ffmpeg_swresample_plugin, "~> 0.10.0", only: :test}
+      {:membrane_ffmpeg_swresample_plugin, "~> 0.11.0", only: :test}
     ]
   end
 
   defp package do
     [
       maintainers: ["Membrane Team"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @github_url,
         "Membrane Framework Homepage" => "https://membraneframework.org"
