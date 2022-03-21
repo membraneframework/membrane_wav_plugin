@@ -32,7 +32,7 @@ defmodule Membrane.WAV.Plugin.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 0.9.0"},
-      {:membrane_caps_audio_raw, "~> 0.6.1"},
+      {:membrane_caps_audio_raw, "~> 0.6.0"},
       {:membrane_file_plugin, "~> 0.9.0", optional: true},
       {:ex_doc, "~> 0.26", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
@@ -57,6 +57,7 @@ defmodule Membrane.WAV.Plugin.Mixfile do
     [
       main: "readme",
       extras: ["README.md", "LICENSE"],
+      formatters: ["html"],
       source_ref: "v#{@version}",
       nest_modules_by_prefix: [Membrane.WAV]
     ]
