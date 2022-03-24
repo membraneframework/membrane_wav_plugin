@@ -2,8 +2,7 @@ defmodule Membrane.WAV.Serializer do
   @moduledoc """
   Element responsible for raw audio serialization to WAV format.
 
-  Creates WAV header (its description can be found with `Membrane.WAV.Parser`) from received caps
-  and puts it before audio samples. The element assumes that audio is in PCM format.
+  Creates WAV header (its description can be found with `Membrane.WAV.Parser`) from received formats and puts it before audio samples. The element assumes that audio is in PCM format.
 
   `file length` and `data length` fields can be calculated only after processing all samples, so
   the serializer uses `Membrane.File.SeekEvent` to supply them with proper values before the end

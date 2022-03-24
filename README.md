@@ -28,7 +28,7 @@ the output.
 Parsing steps:
 
 - Reading WAV header
-- Extracting audio metadata and sending it through caps to the next element
+- Extracting audio metadata and sending it through pads to the next element
 - Sending only audio samples to the next elements
 
 It can parse only uncompressed audio.
