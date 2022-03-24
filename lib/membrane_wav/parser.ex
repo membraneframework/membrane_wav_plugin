@@ -3,7 +3,7 @@ defmodule Membrane.WAV.Parser do
   Element responsible for parsing WAV files.
 
   It requires WAV file in uncompressed, PCM format on the input (otherwise error is raised) and
-  provides raw audio on the output. WAV header is parsed to extract metadata for creating formats.
+  provides raw audio on the output. WAV header is parsed to extract metadata of the raw audio format.
   Then it is dropped and only samples are sent to the next element.
 
   The element has one option - `frames_per_buffer`. User can specify number of frames sent in
@@ -49,7 +49,7 @@ defmodule Membrane.WAV.Parser do
   - `:format` - Parser waits for the next 22 bytes - `fmt` chunk (bytes 20 - 35) without
     `format` and either `"fact"` and `fact chunk length` or `"data"` and `data length in bytes`.
     Then it parses it and create `Membrane.RawAudio` struct with audio format to send it
-    as format to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
+    as caps to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
   - `:fact` - Parser waits for `8 + fact chunk length` bytes. It  parses them only to check if
     the header is correct, but does not use that data in any way. After parsing, the stage is
     set to `:data`.

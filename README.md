@@ -28,7 +28,7 @@ the output.
 Parsing steps:
 
 - Reading WAV header
-- Extracting audio metadata and sending it through pads to the next element
+- Extracting audio metadata and sending it through a pad to the next element
 - Sending only audio samples to the next elements
 
 It can parse only uncompressed audio.
@@ -39,7 +39,7 @@ The Serializer adds WAV header to the raw audio in uncompressed, PCM format.
 
 ### Warning
 
-The Serializer creates header with invalid blocks which depend on the file size. You can bypass this 
+The Serializer creates header with invalid blocks which depend on the file size. You can bypass this
 using `Membrane.File.Sink` to save the file or fixing the header afterwards with `Membrane.WAV.Postprocessing`
 if you need to use any other sink.
 
