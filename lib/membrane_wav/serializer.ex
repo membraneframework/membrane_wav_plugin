@@ -74,12 +74,12 @@ defmodule Membrane.WAV.Serializer do
   end
 
   @impl true
-  def handle_caps(:input, caps, _context, state) do
-    buffer = %Buffer{payload: create_header(caps)}
+  def handle_caps(:input, format, _context, state) do
+    buffer = %Buffer{payload: create_header(format)}
     # subtracting 8 bytes as header length doesn't include "RIFF" and `file_length` fields
     state = Map.put(state, :header_length, byte_size(buffer.payload) - 8)
 
-    {{:ok, caps: {:output, caps}, buffer: {:output, buffer}, redemand: :output}, state}
+    {{:ok, caps: {:output, format}, buffer: {:output, buffer}, redemand: :output}, state}
   end
 
   @impl true
@@ -98,15 +98,15 @@ defmodule Membrane.WAV.Serializer do
         context,
         %{frames_per_buffer: frames} = state
       ) do
-    caps = context.pads.output.caps
-    demand_size = RawAudio.frames_to_bytes(frames, caps) * buffers_count
+    format = context.pads.output.caps
+    demand_size = RawAudio.frames_to_bytes(frames, format) * buffers_count
 
     {{:ok, demand: {:input, demand_size}}, state}
   end
 
   @impl true
   def handle_process_list(:input, _buffers, _context, %{header_length: 0}) do
-    raise "Buffers received before caps, cannot create the header"
+    raise "Buffers received before format, cannot create the header"
   end
 
   def handle_process_list(:input, buffers, _context, %{data_length: data_length} = state) do

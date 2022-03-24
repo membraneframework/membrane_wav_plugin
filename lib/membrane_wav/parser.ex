@@ -115,9 +115,9 @@ defmodule Membrane.WAV.Parser do
         buffers_count,
         :buffers,
         _context,
-        %{stage: :data, frames_per_buffer: frames, caps: caps} = state
+        %{stage: :data, frames_per_buffer: frames, format: format} = state
       ) do
-    demand_size = RawAudio.frames_to_bytes(frames, caps) * buffers_count
+    demand_size = RawAudio.frames_to_bytes(frames, format) * buffers_count
     {{:ok, demand: {:input, demand_size}}, state}
   end
 
@@ -169,25 +169,25 @@ defmodule Membrane.WAV.Parser do
       next_chunk_size::32-little
     >> = payload
 
-    caps = %RawAudio{
+    format = %RawAudio{
       channels: channels,
       sample_rate: sample_rate,
       sample_format: RawAudio.SampleFormat.from_tuple({:s, bits_per_sample, :le})
     }
 
-    state = Map.merge(state, %{caps: caps})
+    state = Map.merge(state, %{format: format})
 
     case next_chunk_type do
       "fact" ->
         state = %{state | stage: :fact}
         demand = {:input, @fact_stage_base_size + next_chunk_size}
 
-        {{:ok, caps: {:output, caps}, demand: demand}, state}
+        {{:ok, caps: {:output, format}, demand: demand}, state}
 
       "data" ->
         state = %{state | stage: :data}
 
-        {{:ok, caps: {:output, caps}, redemand: :output}, state}
+        {{:ok, caps: {:output, format}, redemand: :output}, state}
     end
   end
 

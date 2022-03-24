@@ -31,8 +31,8 @@ defmodule Membrane.WAV.ParserTest do
   end
 
   describe "Parser should" do
-    test "parse and send proper caps" do
-      expected_caps = %RawAudio{
+    test "parse and send proper format" do
+      expected_format = %RawAudio{
         channels: 1,
         sample_rate: 16_000,
         sample_format: :s16le
@@ -54,7 +54,7 @@ defmodule Membrane.WAV.ParserTest do
       assert {:ok, pid} = Pipeline.start_link(pipeline_options)
 
       assert Pipeline.play(pid) == :ok
-      assert_sink_caps(pid, :sink, ^expected_caps)
+      assert_sink_caps(pid, :sink, ^expected_format)
       Pipeline.stop_and_terminate(pid, blocking?: true)
     end
 

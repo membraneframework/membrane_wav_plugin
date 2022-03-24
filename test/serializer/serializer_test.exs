@@ -15,7 +15,7 @@ defmodule Membrane.WAV.SerializerTest do
 
   describe "Serializer should" do
     test "create header properly for one channel" do
-      caps = %RawAudio{
+      format = %RawAudio{
         channels: 1,
         sample_rate: 16_000,
         sample_format: :s16le
@@ -37,7 +37,7 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_length: 0})
+      {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
 
       assert {:ok,
               caps: _caps,
@@ -46,7 +46,7 @@ defmodule Membrane.WAV.SerializerTest do
     end
 
     test "create header properly for two channels" do
-      caps = %RawAudio{
+      format = %RawAudio{
         channels: 2,
         sample_rate: 44_100,
         sample_format: :s24le
@@ -68,7 +68,7 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, caps, %{}, %{header_length: 0})
+      {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
 
       assert {:ok,
               caps: _caps,
