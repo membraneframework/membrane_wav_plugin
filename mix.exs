@@ -1,7 +1,7 @@
 defmodule Membrane.WAV.Plugin.Mixfile do
   use Mix.Project
 
-  @version "0.3.0-alpha"
+  @version "0.4.0"
   @github_url "https://github.com/membraneframework/membrane_wav_plugin"
 
   def project do
@@ -57,6 +57,7 @@ defmodule Membrane.WAV.Plugin.Mixfile do
     [
       main: "readme",
       extras: ["README.md", "LICENSE"],
+      formatters: ["html"],
       source_ref: "v#{@version}",
       nest_modules_by_prefix: [Membrane.WAV]
     ]
