@@ -28,7 +28,7 @@ the output.
 Parsing steps:
 
 - Reading WAV header
-- Extracting audio metadata and sending it through caps to the next element
+- Extracting audio metadata and sending it through a pad to the next element
 - Sending only audio samples to the next elements
 
 It can parse only uncompressed audio.
@@ -39,7 +39,7 @@ The Serializer adds WAV header to the raw audio in uncompressed, PCM format.
 
 ### Warning
 
-The Serializer creates header with invalid blocks which depend on the file size. You can bypass this 
+The Serializer creates header with invalid blocks which depend on the file size. You can bypass this
 using `Membrane.File.Sink` to save the file or fixing the header afterwards with `Membrane.WAV.Postprocessing`
 if you need to use any other sink.
 
@@ -55,8 +55,8 @@ defmodule Mixing.Pipeline do
       file_src: %Membrane.File.Source{location: "/tmp/input.wav"},
       parser: Membrane.WAV.Parser,
       converter: %Membrane.FFmpeg.SWResample.Converter{
-        input_caps: %Membrane.Caps.Audio.Raw{channels: 1, sample_rate: 16_000, format: :s16le},
-        output_caps: %Membrane.Caps.Audio.Raw{channels: 2, sample_rate: 48_000, format: :s16le}
+        input_caps: %Membrane.RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
+        output_caps: %Membrane.RawAudio{channels: 2, sample_rate: 48_000, sample_format: :s16le}
       },
       serializer: Membrane.WAV.Serializer,
       file_sink: %Membrane.File.Sink{location: "/tmp/output.wav"},

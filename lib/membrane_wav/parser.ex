@@ -3,7 +3,7 @@ defmodule Membrane.WAV.Parser do
   Element responsible for parsing WAV files.
 
   It requires WAV file in uncompressed, PCM format on the input (otherwise error is raised) and
-  provides raw audio on the output. WAV header is parsed to extract metadata for creating caps.
+  provides raw audio on the output. WAV header is parsed to extract metadata of the raw audio format.
   Then it is dropped and only samples are sent to the next element.
 
   The element has one option - `frames_per_buffer`. User can specify number of frames sent in
@@ -48,7 +48,7 @@ defmodule Membrane.WAV.Parser do
     length than 16 (for PCM). After parsing, the stage is set to `:format`.
   - `:format` - Parser waits for the next 22 bytes - `fmt` chunk (bytes 20 - 35) without
     `format` and either `"fact"` and `fact chunk length` or `"data"` and `data length in bytes`.
-    Then it parses it and create `Membrane.Caps.Audio.Raw` struct with audio format to send it
+    Then it parses it and create `Membrane.RawAudio` struct with audio format to send it
     as caps to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
   - `:fact` - Parser waits for `8 + fact chunk length` bytes. It  parses them only to check if
     the header is correct, but does not use that data in any way. After parsing, the stage is
@@ -59,9 +59,7 @@ defmodule Membrane.WAV.Parser do
 
   use Membrane.Filter
 
-  alias Membrane.Buffer
-  alias Membrane.Caps.Audio.Raw, as: Caps
-  alias Membrane.Caps.Audio.Raw.Format
+  alias Membrane.{Buffer, RawAudio}
 
   @pcm_format_size 16
 
@@ -82,7 +80,7 @@ defmodule Membrane.WAV.Parser do
   def_output_pad :output,
     mode: :pull,
     availability: :always,
-    caps: Caps
+    caps: RawAudio
 
   def_input_pad :input,
     mode: :pull,
@@ -117,9 +115,9 @@ defmodule Membrane.WAV.Parser do
         buffers_count,
         :buffers,
         _context,
-        %{stage: :data, frames_per_buffer: frames, caps: caps} = state
+        %{stage: :data, frames_per_buffer: frames, format: format} = state
       ) do
-    demand_size = Caps.frames_to_bytes(frames, caps) * buffers_count
+    demand_size = RawAudio.frames_to_bytes(frames, format) * buffers_count
     {{:ok, demand: {:input, demand_size}}, state}
   end
 
@@ -171,25 +169,25 @@ defmodule Membrane.WAV.Parser do
       next_chunk_size::32-little
     >> = payload
 
-    caps = %Caps{
+    format = %RawAudio{
       channels: channels,
       sample_rate: sample_rate,
-      format: Format.from_tuple({:s, bits_per_sample, :le})
+      sample_format: RawAudio.SampleFormat.from_tuple({:s, bits_per_sample, :le})
     }
 
-    state = Map.merge(state, %{caps: caps})
+    state = Map.merge(state, %{format: format})
 
     case next_chunk_type do
       "fact" ->
         state = %{state | stage: :fact}
         demand = {:input, @fact_stage_base_size + next_chunk_size}
 
-        {{:ok, caps: {:output, caps}, demand: demand}, state}
+        {{:ok, caps: {:output, format}, demand: demand}, state}
 
       "data" ->
         state = %{state | stage: :data}
 
-        {{:ok, caps: {:output, caps}, redemand: :output}, state}
+        {{:ok, caps: {:output, format}, redemand: :output}, state}
     end
   end
 
