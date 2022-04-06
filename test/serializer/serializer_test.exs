@@ -39,10 +39,7 @@ defmodule Membrane.WAV.SerializerTest do
 
       {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
 
-      assert {:ok,
-              caps: _caps,
-              buffer: {:output, %Buffer{payload: ^reference_header}},
-              redemand: :output} = actions
+      assert {:ok, caps: _caps, buffer: {:output, %Buffer{payload: ^reference_header}}} = actions
     end
 
     test "create header properly for two channels" do
@@ -70,10 +67,7 @@ defmodule Membrane.WAV.SerializerTest do
 
       {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
 
-      assert {:ok,
-              caps: _caps,
-              buffer: {:output, %Buffer{payload: ^reference_header}},
-              redemand: :output} = actions
+      assert {:ok, caps: _caps, buffer: {:output, %Buffer{payload: ^reference_header}}} = actions
     end
 
     test "work when seeking is disabled" do
