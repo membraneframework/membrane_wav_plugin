@@ -78,7 +78,7 @@ defmodule Membrane.WAV.Parser do
     availability: :always,
     demand_unit: :bytes,
     demand_mode: :auto,
-    caps: {RemoteStream, content_format: one_of([nil, Membrane.WAV])}
+    caps: RemoteStream
 
   @impl true
   def handle_init(_options) do
