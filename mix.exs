@@ -12,8 +12,13 @@ defmodule Membrane.WAV.Plugin.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      dialyzer: dialyzer(),
+
+      # hex
       description: "Membrane Multimedia Framework plugin for WAV",
       package: package(),
+
+      # docs
       name: "Membrane WAV Plugin",
       source_url: @github_url,
       homepage_url: "https://membraneframework.org",
@@ -41,6 +46,20 @@ defmodule Membrane.WAV.Plugin.Mixfile do
       # Testing
       {:membrane_ffmpeg_swresample_plugin, "~> 0.12.0", only: :test}
     ]
+  end
+
+  defp dialyzer() do
+    opts = [
+      flags: [:error_handling]
+    ]
+
+    if System.get_env("CI") == "true" do
+      # Store PLTs in cacheable directory for CI
+      File.mkdir_p!(Path.join([__DIR__, "priv", "plts"]))
+      [plt_local_path: "priv/plts", plt_core_path: "priv/plts"] ++ opts
+    else
+      opts
+    end
   end
 
   defp package do
