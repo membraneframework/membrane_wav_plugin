@@ -26,6 +26,7 @@ defmodule Membrane.WAV.ParserTest do
     assert {:ok, pid} = Pipeline.start_link(pipeline_options)
 
     assert Pipeline.play(pid) == :ok
+    assert_start_of_stream(pid, :file_sink, :input)
     assert_end_of_stream(pid, :file_sink, :input, 5_000)
     Pipeline.stop_and_terminate(pid, blocking?: true)
   end
@@ -91,26 +92,26 @@ defmodule Membrane.WAV.ParserTest do
 
       assert_raise(
         RuntimeError,
-        "formats different than PCM are not supported; expected 1, given 2; format chunk size: 16",
+        ~r"formats different than PCM are not supported",
         fn ->
-          @module.handle_process(
+          @module.handle_process_list(
             :input,
-            %Buffer{payload: payload_unsupported_format},
+            [%Buffer{payload: payload_unsupported_format}],
             nil,
-            %{stage: :init, queue: <<>>}
+            %{stage: :init, unparsed_data: <<>>}
           )
         end
       )
 
       assert_raise(
         RuntimeError,
-        "format chunk size different than supported; expected 16, given 18",
+        ~r"format chunk size different than supported",
         fn ->
-          @module.handle_process(
+          @module.handle_process_list(
             :input,
-            %Buffer{payload: payload_unsupported_format_length},
+            [%Buffer{payload: payload_unsupported_format_length}],
             nil,
-            %{stage: :init, queue: <<>>}
+            %{stage: :init, unparsed_data: <<>>}
           )
         end
       )

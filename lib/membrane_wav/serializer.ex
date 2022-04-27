@@ -8,10 +8,6 @@ defmodule Membrane.WAV.Serializer do
   the serializer uses `Membrane.File.SeekEvent` to supply them with proper values before the end
   of stream. If your sink doesn't support seeking, set `disable_seeking` option to `true` and fix
   the header using `Membrane.WAV.Postprocessing`.
-
-  The option `frames_per_buffer` makes it possible to specify number of frames sent in one
-  buffer when demand unit on the output is `:buffers`. One frame contains
-  `bits per sample * number of channels` bits.
   """
 
   use Membrane.Filter
@@ -27,16 +23,7 @@ defmodule Membrane.WAV.Serializer do
   @file_length_offset 4
   @data_length_offset 40
 
-  def_options frames_per_buffer: [
-                type: :integer,
-                spec: pos_integer(),
-                description: """
-                Assumed number of raw audio frames in each buffer.
-                Used when converting demand from buffers into bytes.
-                """,
-                default: 2048
-              ],
-              disable_seeking: [
+  def_options disable_seeking: [
                 spec: boolean(),
                 description: """
                 Whether the element should disable emitting `Membrane.File.SeekEvent`.
@@ -50,6 +37,7 @@ defmodule Membrane.WAV.Serializer do
 
   def_output_pad :output,
     mode: :pull,
+    demand_mode: :auto,
     availability: :always,
     caps: :any
 
@@ -57,6 +45,7 @@ defmodule Membrane.WAV.Serializer do
     mode: :pull,
     availability: :always,
     demand_unit: :bytes,
+    demand_mode: :auto,
     caps: RawAudio
 
   @impl true
@@ -78,29 +67,7 @@ defmodule Membrane.WAV.Serializer do
     # subtracting 8 bytes as header length doesn't include "RIFF" and `file_length` fields
     state = Map.put(state, :header_length, byte_size(buffer.payload) - 8)
 
-    {{:ok, caps: {:output, format}, buffer: {:output, buffer}, redemand: :output}, state}
-  end
-
-  @impl true
-  def handle_demand(:output, _size, _unit, _context, %{header_length: 0} = state) do
-    {:ok, state}
-  end
-
-  def handle_demand(:output, size, :bytes, _context, state) do
-    {{:ok, demand: {:input, size}}, state}
-  end
-
-  def handle_demand(
-        :output,
-        buffers_count,
-        :buffers,
-        context,
-        %{frames_per_buffer: frames} = state
-      ) do
-    format = context.pads.output.caps
-    demand_size = RawAudio.frames_to_bytes(frames, format) * buffers_count
-
-    {{:ok, demand: {:input, demand_size}}, state}
+    {{:ok, caps: {:output, format}, buffer: {:output, buffer}}, state}
   end
 
   @impl true
@@ -116,7 +83,7 @@ defmodule Membrane.WAV.Serializer do
 
     state = Map.put(state, :data_length, data_length)
 
-    {{:ok, buffer: {:output, buffers}, redemand: :output}, state}
+    {{:ok, buffer: {:output, buffers}}, state}
   end
 
   @impl true
