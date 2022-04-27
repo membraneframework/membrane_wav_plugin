@@ -1,7 +1,7 @@
 defmodule Membrane.WAV.Plugin.Mixfile do
   use Mix.Project
 
-  @version "0.5.0"
+  @version "0.6.0"
   @github_url "https://github.com/membraneframework/membrane_wav_plugin"
 
   def project do
@@ -12,8 +12,13 @@ defmodule Membrane.WAV.Plugin.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      dialyzer: dialyzer(),
+
+      # hex
       description: "Membrane Multimedia Framework plugin for WAV",
       package: package(),
+
+      # docs
       name: "Membrane WAV Plugin",
       source_url: @github_url,
       homepage_url: "https://membraneframework.org",
@@ -43,6 +48,20 @@ defmodule Membrane.WAV.Plugin.Mixfile do
     ]
   end
 
+  defp dialyzer() do
+    opts = [
+      flags: [:error_handling]
+    ]
+
+    if System.get_env("CI") == "true" do
+      # Store PLTs in cacheable directory for CI
+      File.mkdir_p!(Path.join([__DIR__, "priv", "plts"]))
+      [plt_local_path: "priv/plts", plt_core_path: "priv/plts"] ++ opts
+    else
+      opts
+    end
+  end
+
   defp package do
     [
       maintainers: ["Membrane Team"],
@@ -50,8 +69,7 @@ defmodule Membrane.WAV.Plugin.Mixfile do
       links: %{
         "GitHub" => @github_url,
         "Membrane Framework Homepage" => "https://membraneframework.org"
-      },
-      files: ["lib", "mix.exs", "README*", "LICENSE*", ".formatter.exs"]
+      }
     ]
   end
 
