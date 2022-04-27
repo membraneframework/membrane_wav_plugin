@@ -104,8 +104,8 @@ defmodule Membrane.WAV.Parser do
   def handle_process_list(:input, buffers, _context, state) do
     payload =
       buffers
-      |> Enum.map(&Map.get(&1, :payload))
-      |> List.insert_at(0, state.unparsed_data)
+      |> Enum.map(& &1.payload)
+      |> then(&[state.unparsed_data | &1])
       |> IO.iodata_to_binary()
 
     {actions, state} = parse_payload(payload, state)
@@ -177,7 +177,7 @@ defmodule Membrane.WAV.Parser do
        when byte_size(payload) >= stage_size + @data_stage_base_size do
     # Ignoring "fact" chunk, for PCM, if present, it only contains a number of samples in file
     <<
-      _fact_chunk::bytes-size(stage_size),
+      _fact_chunk::binary-size(stage_size),
       "data",
       data_size::32,
       rest::binary
