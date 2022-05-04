@@ -59,114 +59,101 @@ defmodule Membrane.WAV.Parser do
 
   use Membrane.Filter
 
-  alias Membrane.{Buffer, RawAudio}
+  alias Membrane.{Buffer, RawAudio, RemoteStream}
 
   @pcm_format_size 16
 
   @init_stage_size 22
   @format_stage_size 22
-  @fact_stage_base_size 8
-
-  def_options frames_per_buffer: [
-                type: :integer,
-                spec: pos_integer(),
-                description: """
-                Assumed number of raw audio frames in each buffer.
-                Used when converting demand from buffers into bytes.
-                """,
-                default: 2048
-              ]
+  @data_stage_base_size 8
 
   def_output_pad :output,
     mode: :pull,
     availability: :always,
+    demand_mode: :auto,
     caps: RawAudio
 
   def_input_pad :input,
     mode: :pull,
     availability: :always,
     demand_unit: :bytes,
-    caps: :any
+    demand_mode: :auto,
+    caps: RemoteStream
 
   @impl true
-  def handle_init(options) do
-    state =
-      options
-      |> Map.from_struct()
-      |> Map.put(:stage, :init)
+  def handle_init(_options) do
+    state = %{
+      stage: :init,
+      next_stage_size: @init_stage_size,
+      unparsed_data: ""
+    }
 
     {:ok, state}
   end
 
   @impl true
-  def handle_prepared_to_playing(_context, state) do
-    demand = {:input, @init_stage_size}
-
-    {{:ok, demand: demand}, state}
-  end
-
-  @impl true
-  def handle_demand(:output, size, :bytes, _context, %{stage: :data} = state) do
-    {{:ok, demand: {:input, size}}, state}
-  end
-
-  def handle_demand(
-        :output,
-        buffers_count,
-        :buffers,
-        _context,
-        %{stage: :data, frames_per_buffer: frames, format: format} = state
-      ) do
-    demand_size = RawAudio.frames_to_bytes(frames, format) * buffers_count
-    {{:ok, demand: {:input, demand_size}}, state}
-  end
-
-  def handle_demand(:output, _size, _unit, _context, state) do
+  def handle_caps(:input, _format, _context, state) do
     {:ok, state}
   end
 
   @impl true
-  def handle_process(:input, buffer, _context, %{stage: :data} = state) do
-    {{:ok, buffer: {:output, buffer}, redemand: :output}, state}
+  def handle_process_list(:input, buffers, _context, %{stage: :data} = state) do
+    {{:ok, buffer: {:output, buffers}}, state}
   end
 
-  def handle_process(
-        :input,
-        %Buffer{payload: payload} = _buffer,
-        _context,
-        %{stage: :init} = state
-      ) do
+  def handle_process_list(:input, buffers, _context, state) do
+    payload =
+      buffers
+      |> Enum.map(& &1.payload)
+      |> then(&[state.unparsed_data | &1])
+      |> IO.iodata_to_binary()
+
+    {actions, state} = parse_payload(payload, state)
+
+    {{:ok, actions}, state}
+  end
+
+  defp parse_payload(payload, state, actions_acc \\ [])
+
+  defp parse_payload(payload, %{stage: :data} = state, actions_acc) do
+    actions =
+      [{:buffer, {:output, %Buffer{payload: payload}}} | actions_acc]
+      |> Enum.reverse()
+
+    state = %{state | unparsed_data: ""}
+    {actions, state}
+  end
+
+  defp parse_payload(payload, %{stage: :init} = state, actions_acc)
+       when byte_size(payload) >= @init_stage_size do
     <<
       "RIFF",
       _file_size::32-little,
       "WAVE",
       "fmt ",
       format_chunk_size::32-little,
-      format::16-little
+      format::16-little,
+      rest::binary
     >> = payload
 
     check_format(format, format_chunk_size)
 
-    demand = {:input, @format_stage_size}
     state = %{state | stage: :format}
 
-    {{:ok, demand: demand}, state}
+    parse_payload(rest, state, actions_acc)
   end
 
-  def handle_process(
-        :input,
-        %Buffer{payload: payload} = _buffer,
-        _context,
-        %{stage: :format} = state
-      ) do
+  defp parse_payload(payload, %{stage: :format} = state, actions_acc)
+       when byte_size(payload) >= @format_stage_size do
     <<
       channels::16-little,
       sample_rate::32-little,
       _data_transmission_rate::32,
       _block_alignment_unit::16,
       bits_per_sample::16-little,
-      next_chunk_type::4-bytes,
-      next_chunk_size::32-little
+      next_chunk_type::32-bits,
+      next_chunk_size::32-little,
+      rest::binary
     >> = payload
 
     format = %RawAudio{
@@ -175,54 +162,50 @@ defmodule Membrane.WAV.Parser do
       sample_format: RawAudio.SampleFormat.from_tuple({:s, bits_per_sample, :le})
     }
 
-    state = Map.merge(state, %{format: format})
+    next_stage =
+      case next_chunk_type do
+        "fact" -> :fact
+        "data" -> :data
+      end
 
-    case next_chunk_type do
-      "fact" ->
-        state = %{state | stage: :fact}
-        demand = {:input, @fact_stage_base_size + next_chunk_size}
-
-        {{:ok, caps: {:output, format}, demand: demand}, state}
-
-      "data" ->
-        state = %{state | stage: :data}
-
-        {{:ok, caps: {:output, format}, redemand: :output}, state}
-    end
+    acc = [{:caps, {:output, format}} | actions_acc]
+    state = %{state | stage: next_stage, next_stage_size: next_chunk_size}
+    parse_payload(rest, state, acc)
   end
 
-  def handle_process(
-        :input,
-        %Buffer{payload: payload} = _buffer,
-        _context,
-        %{stage: :fact} = state
-      ) do
-    fact_chunk_size = 8 * (byte_size(payload) - @fact_stage_base_size)
-
+  defp parse_payload(payload, %{stage: :fact, next_stage_size: stage_size} = state, actions_acc)
+       when byte_size(payload) >= stage_size + @data_stage_base_size do
+    # Ignoring "fact" chunk, for PCM, if present, it only contains a number of samples in file
     <<
-      _fact_chunk::size(fact_chunk_size),
+      _fact_chunk::binary-size(stage_size),
       "data",
-      _data_length::32
+      data_size::32,
+      rest::binary
     >> = payload
 
-    state = %{state | stage: :data}
+    state = %{state | stage: :data, next_stage_size: data_size}
 
-    {{:ok, redemand: :output}, state}
+    parse_payload(rest, state, actions_acc)
+  end
+
+  # Reached only when parsing was stopped before reaching :data stage
+  # due to insufficient amount of data
+  defp parse_payload(payload, %{stage: stage} = state, actions_acc) when stage != :data do
+    state = %{state | unparsed_data: payload}
+    {Enum.reverse(actions_acc), state}
   end
 
   defp check_format(format, format_chunk_size) do
     cond do
       format != 1 ->
-        raise(
-          RuntimeError,
-          "formats different than PCM are not supported; expected 1, given #{format}; format chunk size: #{format_chunk_size}"
-        )
+        raise """
+        formats different than PCM are not supported; expected 1, given #{format}; format chunk size: #{format_chunk_size}
+        """
 
       format_chunk_size != @pcm_format_size ->
-        raise(
-          RuntimeError,
-          "format chunk size different than supported; expected 16, given #{format_chunk_size}"
-        )
+        raise """
+        format chunk size different than supported; expected 16, given #{format_chunk_size}
+        """
 
       true ->
         :ok

@@ -1,17 +1,17 @@
 defmodule Membrane.WAV.SerializerTest do
-  use ExUnit.Case
-  use Membrane.Pipeline
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
+  import Membrane.ParentSpec
 
   alias Membrane.{Buffer, RawAudio}
   alias Membrane.Testing.Pipeline
 
   @module Membrane.WAV.Serializer
 
-  @input_path Path.expand("../fixtures/input.wav", __DIR__)
-  @reference_path Path.expand("../fixtures/reference.wav", __DIR__)
-  @processed_path Path.expand("../fixtures/reference_processed.wav", __DIR__)
+  @input_path Path.expand("fixtures/input.wav", __DIR__)
+  @reference_path Path.expand("fixtures/reference.wav", __DIR__)
+  @processed_path Path.expand("fixtures/reference_processed.wav", __DIR__)
 
   describe "Serializer should" do
     test "create header properly for one channel" do
@@ -39,10 +39,7 @@ defmodule Membrane.WAV.SerializerTest do
 
       {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
 
-      assert {:ok,
-              caps: _caps,
-              buffer: {:output, %Buffer{payload: ^reference_header}},
-              redemand: :output} = actions
+      assert {:ok, caps: _caps, buffer: {:output, %Buffer{payload: ^reference_header}}} = actions
     end
 
     test "create header properly for two channels" do
@@ -70,10 +67,7 @@ defmodule Membrane.WAV.SerializerTest do
 
       {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
 
-      assert {:ok,
-              caps: _caps,
-              buffer: {:output, %Buffer{payload: ^reference_header}},
-              redemand: :output} = actions
+      assert {:ok, caps: _caps, buffer: {:output, %Buffer{payload: ^reference_header}}} = actions
     end
 
     test "work when seeking is disabled" do
@@ -108,7 +102,6 @@ defmodule Membrane.WAV.SerializerTest do
 
     @tag :tmp_dir
     test "create valid file when seeking is enabled", %{tmp_dir: tmp_dir} do
-      on_exit(fn -> File.rm_rf!("tmp") end)
       output_path = Path.join([tmp_dir, "output.wav"])
 
       elements = [
