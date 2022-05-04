@@ -33,11 +33,11 @@ defmodule Membrane.WAV.Plugin.Mixfile do
     [
       {:membrane_core, "~> 0.10.0"},
       {:membrane_raw_audio_format, "~> 0.9.0"},
-      {:membrane_file_plugin, "~> 0.9.0", optional: true},
+      {:membrane_file_plugin, "~> 0.12.0", optional: true},
       {:ex_doc, "~> 0.26", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:membrane_ffmpeg_swresample_plugin, "~> 0.12.0", only: :test}
+      {:membrane_ffmpeg_swresample_plugin, "~> 0.14.0", only: :test}
     ]
   end
 
