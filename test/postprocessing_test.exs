@@ -34,9 +34,8 @@ defmodule Membrane.WAV.PostprocessingTest do
 
       pipeline_options = %Pipeline.Options{elements: elements, links: links}
       assert {:ok, pid} = Pipeline.start_link(pipeline_options)
-      assert Pipeline.play(pid) == :ok
       assert_end_of_stream(pid, :file_sink, :input, 2_000)
-      Pipeline.stop_and_terminate(pid, blocking?: true)
+      Pipeline.terminate(pid, blocking?: true)
 
       assert :ok = Postprocessing.fix_wav_header(output_path)
 

@@ -90,14 +90,13 @@ defmodule Membrane.WAV.SerializerTest do
       options = %Pipeline.Options{elements: elements, links: links}
 
       {:ok, pid} = Pipeline.start_link(options)
-      :ok = Pipeline.play(pid)
 
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^header})
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^payload})
       refute_sink_event(pid, :sink, %Membrane.File.SeekEvent{})
       assert_end_of_stream(pid, :sink)
 
-      Pipeline.stop_and_terminate(pid, blocking?: true)
+      Pipeline.terminate(pid, blocking?: true)
     end
 
     @tag :tmp_dir
@@ -121,10 +120,9 @@ defmodule Membrane.WAV.SerializerTest do
       options = %Pipeline.Options{elements: elements, links: links}
 
       {:ok, pid} = Pipeline.start_link(options)
-      :ok = Pipeline.play(pid)
 
       assert_end_of_stream(pid, :file_sink)
-      assert :ok == Pipeline.stop_and_terminate(pid, blocking?: true)
+      assert :ok == Pipeline.terminate(pid, blocking?: true)
 
       {:ok, output} = File.read(output_path)
       {:ok, reference} = File.read(@processed_path)

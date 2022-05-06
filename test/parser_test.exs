@@ -16,10 +16,9 @@ defmodule Membrane.WAV.ParserTest do
     pipeline_options = %Pipeline.Options{elements: elements, links: links}
     assert {:ok, pid} = Pipeline.start_link(pipeline_options)
 
-    assert Pipeline.play(pid) == :ok
     assert_start_of_stream(pid, :file_sink, :input)
     assert_end_of_stream(pid, :file_sink, :input, 5_000)
-    Pipeline.stop_and_terminate(pid, blocking?: true)
+    Pipeline.terminate(pid, blocking?: true)
   end
 
   test "parse and send proper format" do
@@ -44,9 +43,8 @@ defmodule Membrane.WAV.ParserTest do
     pipeline_options = %Pipeline.Options{elements: elements, links: links}
     assert {:ok, pid} = Pipeline.start_link(pipeline_options)
 
-    assert Pipeline.play(pid) == :ok
     assert_sink_caps(pid, :sink, ^expected_format)
-    Pipeline.stop_and_terminate(pid, blocking?: true)
+    Pipeline.terminate(pid, blocking?: true)
   end
 
   test "raise an error in case of unsupported format or format chunk length" do
