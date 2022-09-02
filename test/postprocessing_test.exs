@@ -4,7 +4,7 @@ defmodule Membrane.WAV.PostprocessingTest do
   import Membrane.Testing.Assertions
   import Membrane.ParentSpec
 
-  alias Membrane.File.{Source, Sink}
+  alias Membrane.File.{Sink, Source}
   alias Membrane.Testing.Pipeline
   alias Membrane.WAV.{Parser, Postprocessing, Serializer}
 
