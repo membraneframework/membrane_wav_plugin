@@ -55,8 +55,8 @@ defmodule Mixing.Pipeline do
       file_src: %Membrane.File.Source{location: "/tmp/input.wav"},
       parser: Membrane.WAV.Parser,
       converter: %Membrane.FFmpeg.SWResample.Converter{
-        input_caps: %Membrane.RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
-        output_caps: %Membrane.RawAudio{channels: 2, sample_rate: 48_000, sample_format: :s16le}
+        input_stream_format: %Membrane.RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
+        output_stream_format: %Membrane.RawAudio{channels: 2, sample_rate: 48_000, sample_format: :s16le}
       },
       serializer: Membrane.WAV.Serializer,
       file_sink: %Membrane.File.Sink{location: "/tmp/output.wav"},

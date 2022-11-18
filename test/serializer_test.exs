@@ -2,7 +2,7 @@ defmodule Membrane.WAV.SerializerTest do
   use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
 
   alias Membrane.{Buffer, RawAudio}
   alias Membrane.Testing.Pipeline
@@ -37,9 +37,12 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
+      {actions, _state} = @module.handle_stream_format(:input, format, %{}, %{header_length: 0})
 
-      assert {:ok, caps: _caps, buffer: {:output, %Buffer{payload: ^reference_header}}} = actions
+      assert [
+               stream_format: _stream_format,
+               buffer: {:output, %Buffer{payload: ^reference_header}}
+             ] = actions
     end
 
     test "create header properly for two channels" do
@@ -65,31 +68,25 @@ defmodule Membrane.WAV.SerializerTest do
         0::32-little
       >>
 
-      {actions, _state} = @module.handle_caps(:input, format, %{}, %{header_length: 0})
+      {actions, _state} = @module.handle_stream_format(:input, format, %{}, %{header_length: 0})
 
-      assert {:ok, caps: _caps, buffer: {:output, %Buffer{payload: ^reference_header}}} = actions
+      assert [
+               stream_format: _stream_format,
+               buffer: {:output, %Buffer{payload: ^reference_header}}
+             ] = actions
     end
 
     test "work when seeking is disabled" do
       {:ok, <<header::44-bytes, payload::8-bytes>>} = File.read(@reference_path)
 
-      elements = [
-        file_src: %Membrane.File.Source{location: @input_path},
-        parser: Membrane.WAV.Parser,
-        serializer: %@module{disable_seeking: true},
-        sink: Membrane.Testing.Sink
+      structure = [
+        child(:file_src, %Membrane.File.Source{location: @input_path})
+        |> child(:parser, Membrane.WAV.Parser)
+        |> child(:serializer, %@module{disable_seeking: true})
+        |> child(:sink, Membrane.Testing.Sink)
       ]
 
-      links = [
-        link(:file_src)
-        |> to(:parser)
-        |> to(:serializer)
-        |> to(:sink)
-      ]
-
-      options = %Pipeline.Options{elements: elements, links: links}
-
-      {:ok, pid} = Pipeline.start_link(options)
+      {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
 
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^header})
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^payload})
@@ -103,23 +100,14 @@ defmodule Membrane.WAV.SerializerTest do
     test "create valid file when seeking is enabled", %{tmp_dir: tmp_dir} do
       output_path = Path.join([tmp_dir, "output.wav"])
 
-      elements = [
-        file_src: %Membrane.File.Source{location: @input_path},
-        parser: Membrane.WAV.Parser,
-        serializer: %@module{disable_seeking: false},
-        file_sink: %Membrane.File.Sink{location: output_path}
+      structure = [
+        child(:file_src, %Membrane.File.Source{location: @input_path})
+        |> child(:parser, Membrane.WAV.Parser)
+        |> child(:serializer, %@module{disable_seeking: false})
+        |> child(:file_sink, %Membrane.File.Sink{location: output_path})
       ]
 
-      links = [
-        link(:file_src)
-        |> to(:parser)
-        |> to(:serializer)
-        |> to(:file_sink)
-      ]
-
-      options = %Pipeline.Options{elements: elements, links: links}
-
-      {:ok, pid} = Pipeline.start_link(options)
+      {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
 
       assert_end_of_stream(pid, :file_sink)
       assert :ok == Pipeline.terminate(pid, blocking?: true)

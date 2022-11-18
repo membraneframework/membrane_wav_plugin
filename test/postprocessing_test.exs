@@ -2,7 +2,7 @@ defmodule Membrane.WAV.PostprocessingTest do
   use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
 
   alias Membrane.File.{Sink, Source}
   alias Membrane.Testing.Pipeline
@@ -18,22 +18,14 @@ defmodule Membrane.WAV.PostprocessingTest do
     test "perform proper postprocessing", %{tmp_dir: tmp_dir} do
       output_path = Path.join(tmp_dir, "output.wav")
 
-      elements = [
-        file_src: %Source{location: @input_path},
-        parser: Parser,
-        serializer: Serializer,
-        file_sink: %Sink{location: output_path}
+      structure = [
+        child(:file_src, %Source{location: @input_path})
+        |> child(:parser, Parser)
+        |> child(:serializer, Serializer)
+        |> child(:file_sink, %Sink{location: output_path})
       ]
 
-      links = [
-        link(:file_src)
-        |> to(:parser)
-        |> to(:serializer)
-        |> to(:file_sink)
-      ]
-
-      pipeline_options = %Pipeline.Options{elements: elements, links: links}
-      assert {:ok, pid} = Pipeline.start_link(pipeline_options)
+      assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
       assert_end_of_stream(pid, :file_sink, :input, 2_000)
       Pipeline.terminate(pid, blocking?: true)
 
