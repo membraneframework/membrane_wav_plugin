@@ -43,7 +43,10 @@ defmodule Membrane.WAV.Plugin.Mixfile do
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: :dev, runtime: false},
       # {:membrane_ffmpeg_swresample_plugin, "~> 0.15.0", only: :test}
-      {:membrane_ffmpeg_swresample_plugin, github: "membraneframework/membrane_ffmpeg_swresample_plugin", branch: "core-v0.11", only: :test}
+      {:membrane_ffmpeg_swresample_plugin,
+       github: "membraneframework/membrane_ffmpeg_swresample_plugin",
+       branch: "core-v0.11",
+       only: :test}
     ]
   end
 
