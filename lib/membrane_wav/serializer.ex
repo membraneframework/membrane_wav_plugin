@@ -2,7 +2,7 @@ defmodule Membrane.WAV.Serializer do
   @moduledoc """
   Element responsible for raw audio serialization to WAV format.
 
-  Creates WAV header (its description can be found with `Membrane.WAV.Parser`) based on a format received in caps and puts it before audio samples. The element assumes that audio is in PCM format.
+  Creates WAV header (its description can be found with `Membrane.WAV.Parser`) based on a format received in stream_format and puts it before audio samples. The element assumes that audio is in PCM format.
 
   `file length` and `data length` fields can be calculated only after processing all samples, so
   the serializer uses `Membrane.File.SeekEvent` to supply them with proper values before the end
@@ -39,17 +39,17 @@ defmodule Membrane.WAV.Serializer do
     mode: :pull,
     demand_mode: :auto,
     availability: :always,
-    caps: :any
+    accepted_format: _any
 
   def_input_pad :input,
     mode: :pull,
     availability: :always,
     demand_unit: :bytes,
     demand_mode: :auto,
-    caps: RawAudio
+    accepted_format: RawAudio
 
   @impl true
-  def handle_init(options) do
+  def handle_init(_ctx, options) do
     state =
       options
       |> Map.from_struct()
@@ -58,16 +58,16 @@ defmodule Membrane.WAV.Serializer do
         data_length: 0
       })
 
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
-  def handle_caps(:input, format, _context, state) do
+  def handle_stream_format(:input, format, _context, state) do
     buffer = %Buffer{payload: create_header(format)}
     # subtracting 8 bytes as header length doesn't include "RIFF" and `file_length` fields
     state = Map.put(state, :header_length, byte_size(buffer.payload) - 8)
 
-    {{:ok, caps: {:output, format}, buffer: {:output, buffer}}, state}
+    {[stream_format: {:output, format}, buffer: {:output, buffer}], state}
   end
 
   @impl true
@@ -83,13 +83,13 @@ defmodule Membrane.WAV.Serializer do
 
     state = Map.put(state, :data_length, data_length)
 
-    {{:ok, buffer: {:output, buffers}}, state}
+    {[buffer: {:output, buffers}], state}
   end
 
   @impl true
   def handle_end_of_stream(:input, _context, state) do
     actions = maybe_update_header_actions(state) ++ [end_of_stream: :output]
-    {{:ok, actions}, state}
+    {actions, state}
   end
 
   defp create_header(%RawAudio{

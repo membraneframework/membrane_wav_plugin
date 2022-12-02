@@ -2,7 +2,7 @@ defmodule Membrane.WAV.ParserTest do
   use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
-  import Membrane.ParentSpec
+  import Membrane.ChildrenSpec
 
   alias Membrane.{Buffer, RawAudio}
   alias Membrane.Testing.{Pipeline, Sink}
@@ -12,9 +12,8 @@ defmodule Membrane.WAV.ParserTest do
   @input_path Path.expand("fixtures/input.wav", __DIR__)
   @reference_path Path.expand("fixtures/reference.raw", __DIR__)
 
-  defp perform_test(elements, links) do
-    pipeline_options = %Pipeline.Options{elements: elements, links: links}
-    assert {:ok, pid} = Pipeline.start_link(pipeline_options)
+  defp perform_test(structure) do
+    assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
 
     assert_start_of_stream(pid, :file_sink, :input)
     assert_end_of_stream(pid, :file_sink, :input, 5_000)
@@ -28,22 +27,15 @@ defmodule Membrane.WAV.ParserTest do
       sample_format: :s16le
     }
 
-    elements = [
-      file_src: %Membrane.File.Source{location: @input_path},
-      parser: Membrane.WAV.Parser,
-      sink: Sink
+    structure = [
+      child(:file_src, %Membrane.File.Source{location: @input_path})
+      |> child(:parser, Membrane.WAV.Parser)
+      |> child(:sink, Sink)
     ]
 
-    links = [
-      link(:file_src)
-      |> to(:parser)
-      |> to(:sink)
-    ]
+    assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
 
-    pipeline_options = %Pipeline.Options{elements: elements, links: links}
-    assert {:ok, pid} = Pipeline.start_link(pipeline_options)
-
-    assert_sink_caps(pid, :sink, ^expected_format)
+    assert_sink_stream_format(pid, :sink, ^expected_format)
     Pipeline.terminate(pid, blocking?: true)
   end
 
@@ -89,19 +81,13 @@ defmodule Membrane.WAV.ParserTest do
     test "drop header", %{tmp_dir: tmp_dir} do
       output_path = Path.join(tmp_dir, "output.raw")
 
-      elements = [
-        file_src: %Membrane.File.Source{location: @input_path},
-        parser: Membrane.WAV.Parser,
-        file_sink: %Membrane.File.Sink{location: output_path}
+      structure = [
+        child(:file_src, %Membrane.File.Source{location: @input_path})
+        |> child(:parser, Membrane.WAV.Parser)
+        |> child(:file_sink, %Membrane.File.Sink{location: output_path})
       ]
 
-      links = [
-        link(:file_src)
-        |> to(:parser)
-        |> to(:file_sink)
-      ]
-
-      perform_test(elements, links)
+      perform_test(structure)
 
       assert {:ok, reference_file} = File.read(@reference_path)
       assert {:ok, output_file} = File.read(output_path)
@@ -111,24 +97,17 @@ defmodule Membrane.WAV.ParserTest do
     test "work properly with FFmpeg SWResample Converter", %{tmp_dir: tmp_dir} do
       output_path = Path.join(tmp_dir, "output.raw")
 
-      elements = [
-        file_src: %Membrane.File.Source{location: @input_path},
-        parser: Membrane.WAV.Parser,
-        converter: %Membrane.FFmpeg.SWResample.Converter{
-          input_caps: %RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
-          output_caps: %RawAudio{channels: 2, sample_rate: 16_000, sample_format: :s16le}
-        },
-        file_sink: %Membrane.File.Sink{location: output_path}
+      structure = [
+        child(:file_src, %Membrane.File.Source{location: @input_path})
+        |> child(:parser, Membrane.WAV.Parser)
+        |> child(:converter, %Membrane.FFmpeg.SWResample.Converter{
+          input_stream_format: %RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
+          output_stream_format: %RawAudio{channels: 2, sample_rate: 16_000, sample_format: :s16le}
+        })
+        |> child(:file_sink, %Membrane.File.Sink{location: output_path})
       ]
 
-      links = [
-        link(:file_src)
-        |> to(:parser)
-        |> to(:converter)
-        |> to(:file_sink)
-      ]
-
-      perform_test(elements, links)
+      perform_test(structure)
 
       assert {:ok, output_file} = File.read(output_path)
       assert byte_size(output_file) == 16

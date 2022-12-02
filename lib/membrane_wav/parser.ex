@@ -49,7 +49,7 @@ defmodule Membrane.WAV.Parser do
   - `:format` - Parser waits for the next 22 bytes - `fmt` chunk (bytes 20 - 35) without
     `format` and either `"fact"` and `fact chunk length` or `"data"` and `data length in bytes`.
     Then it parses it and create `Membrane.RawAudio` struct with audio format to send it
-    as caps to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
+    as stream_format to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
   - `:fact` - Parser waits for `8 + fact chunk length` bytes. It  parses them only to check if
     the header is correct, but does not use that data in any way. After parsing, the stage is
     set to `:data`.
@@ -71,34 +71,34 @@ defmodule Membrane.WAV.Parser do
     mode: :pull,
     availability: :always,
     demand_mode: :auto,
-    caps: RawAudio
+    accepted_format: RawAudio
 
   def_input_pad :input,
     mode: :pull,
     availability: :always,
     demand_unit: :bytes,
     demand_mode: :auto,
-    caps: RemoteStream
+    accepted_format: RemoteStream
 
   @impl true
-  def handle_init(_options) do
+  def handle_init(_ctx, _options) do
     state = %{
       stage: :init,
       next_stage_size: @init_stage_size,
       unparsed_data: ""
     }
 
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
-  def handle_caps(:input, _format, _context, state) do
-    {:ok, state}
+  def handle_stream_format(:input, _format, _context, state) do
+    {[], state}
   end
 
   @impl true
   def handle_process_list(:input, buffers, _context, %{stage: :data} = state) do
-    {{:ok, buffer: {:output, buffers}}, state}
+    {[buffer: {:output, buffers}], state}
   end
 
   def handle_process_list(:input, buffers, _context, state) do
@@ -110,7 +110,7 @@ defmodule Membrane.WAV.Parser do
 
     {actions, state} = parse_payload(payload, state)
 
-    {{:ok, actions}, state}
+    {actions, state}
   end
 
   defp parse_payload(payload, state, actions_acc \\ [])
@@ -168,7 +168,7 @@ defmodule Membrane.WAV.Parser do
         "data" -> :data
       end
 
-    acc = [{:caps, {:output, format}} | actions_acc]
+    acc = [{:stream_format, {:output, format}} | actions_acc]
     state = %{state | stage: next_stage, next_stage_size: next_chunk_size}
     parse_payload(rest, state, acc)
   end
