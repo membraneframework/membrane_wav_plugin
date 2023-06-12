@@ -15,7 +15,7 @@ The package can be installed by adding `membrane_wav_plugin` to your list of dep
 ```elixir
 def deps do
   [
-	{:membrane_wav_plugin, "~> 0.8.0"}
+	{:membrane_wav_plugin, "~> 0.9.0"}
   ]
 end
 ```
