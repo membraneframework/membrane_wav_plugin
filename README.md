@@ -15,7 +15,7 @@ The package can be installed by adding `membrane_wav_plugin` to your list of dep
 ```elixir
 def deps do
   [
-	  {:membrane_wav_plugin, "~> 0.9.0"}
+	  {:membrane_wav_plugin, "~> 0.9.1"}
   ]
 end
 ```
@@ -50,27 +50,17 @@ defmodule Mixing.Pipeline do
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(_) do
-    children = [
-      file_src: %Membrane.File.Source{location: "/tmp/input.wav"},
-      parser: Membrane.WAV.Parser,
-      converter: %Membrane.FFmpeg.SWResample.Converter{
+  def handle_init(_ctx, _opts) do
+    spec = child(:file_src, %Membrane.File.Source{location: "/tmp/input.wav"})
+      |> child(:parser, Membrane.WAV.Parser)
+      |> child(:converter, %Membrane.FFmpeg.SWResample.Converter{
         input_stream_format: %Membrane.RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
         output_stream_format: %Membrane.RawAudio{channels: 2, sample_rate: 48_000, sample_format: :s16le}
-      },
-      serializer: Membrane.WAV.Serializer,
-      file_sink: %Membrane.File.Sink{location: "/tmp/output.wav"},
-    ]
+      })
+      |> child(:serializer, Membrane.WAV.Serializer)
+      |> child(:file_sink, %Membrane.File.Sink{location: "/tmp/output.wav"})
 
-    links = [
-      link(:file_src)
-      |> to(:parser)
-      |> to(:converter)
-      |> to(:serializer)
-      |> to(:file_sink)
-    ]
-
-    {{:ok, spec: %ParentSpec{children: children, links: links}}, %{}}
+    {[spec: spec], %{}}
   end
 end
 ```
