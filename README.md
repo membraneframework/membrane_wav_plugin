@@ -49,8 +49,6 @@ if you need to use any other sink.
 defmodule Mixing.Pipeline do
   use Membrane.Pipeline
 
-  import Membrane.ChildrenSpec
-
   @impl true
   def handle_init(_ctx, _opts) do
     spec = child(:file_src, %Membrane.File.Source{location: "/tmp/input.wav"})
