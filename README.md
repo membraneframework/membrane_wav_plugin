@@ -53,14 +53,14 @@ defmodule Mixing.Pipeline do
 
   @impl true
   def handle_init(_ctx, _opts) do
-    spec = link(:file_src, %Membrane.File.Source{location: "/tmp/input.wav"})
-      |> to(:parser, Membrane.WAV.Parser)
-      |> to(:converter, %Membrane.FFmpeg.SWResample.Converter{
+    spec = child(:file_src, %Membrane.File.Source{location: "/tmp/input.wav"})
+      |> child(:parser, Membrane.WAV.Parser)
+      |> child(:converter, %Membrane.FFmpeg.SWResample.Converter{
         input_stream_format: %Membrane.RawAudio{channels: 1, sample_rate: 16_000, sample_format: :s16le},
         output_stream_format: %Membrane.RawAudio{channels: 2, sample_rate: 48_000, sample_format: :s16le}
       })
-      |> to(:serializer, Membrane.WAV.Serializer)
-      |> to(:file_sink, %Membrane.File.Sink{location: "/tmp/output.wav"})
+      |> child(:serializer, Membrane.WAV.Serializer)
+      |> child(:file_sink, %Membrane.File.Sink{location: "/tmp/output.wav"})
 
     {[spec: spec], %{}}
   end
