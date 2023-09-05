@@ -90,7 +90,7 @@ defmodule Membrane.WAV.SerializerTest do
 
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^header})
       assert_sink_buffer(pid, :sink, %Buffer{payload: ^payload})
-      refute_sink_event(pid, :sink, %Membrane.File.SeekSourceEvent{})
+      refute_sink_event(pid, :sink, %Membrane.File.SeekSinkEvent{})
       assert_end_of_stream(pid, :sink)
 
       Pipeline.terminate(pid, blocking?: true)
