@@ -5,7 +5,7 @@ defmodule Membrane.WAV.Serializer do
   Creates WAV header (its description can be found with `Membrane.WAV.Parser`) based on a format received in stream_format and puts it before audio samples. The element assumes that audio is in PCM format.
 
   `file length` and `data length` fields can be calculated only after processing all samples, so
-  the serializer uses `Membrane.File.SeekEvent` to supply them with proper values before the end
+  the serializer uses `Membrane.File.SeekSinkEvent` to supply them with proper values before the end
   of stream. If your sink doesn't support seeking, set `disable_seeking` option to `true` and fix
   the header using `Membrane.WAV.Postprocessing`.
   """
@@ -121,14 +121,14 @@ defmodule Membrane.WAV.Serializer do
 
   defp maybe_update_header_actions(%{disable_seeking: true}), do: []
 
-  if Code.ensure_loaded?(Membrane.File.SeekEvent) do
+  if Code.ensure_loaded?(Membrane.File.SeekSourceEvent) do
     defp maybe_update_header_actions(%{header_length: header_length, data_length: data_length}) do
       file_length = header_length + data_length
 
       [
-        event: {:output, %Membrane.File.SeekEvent{position: @file_length_offset}},
+        event: {:output, %Membrane.File.SeekSinkEvent{position: @file_length_offset}},
         buffer: {:output, %Buffer{payload: <<file_length::32-little>>}},
-        event: {:output, %Membrane.File.SeekEvent{position: @data_length_offset}},
+        event: {:output, %Membrane.File.SeekSinkEvent{position: @data_length_offset}},
         buffer: {:output, %Buffer{payload: <<data_length::32-little>>}}
       ]
     end
