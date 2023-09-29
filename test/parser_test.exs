@@ -42,15 +42,17 @@ defmodule Membrane.WAV.ParserTest do
   test "raise an error in case of unsupported format or format chunk length" do
     # contains format equal to 2 (not PCM)
     payload_unsupported_format =
-      <<82, 73, 70, 70, 52, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 16, 0, 0, 0, 2, 0>>
+      <<82, 73, 70, 70, 52, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 16, 0, 0, 0, 2, 0>> <>
+        <<0::176>>
 
     # contains format chunk length equal to 18 (PCM should have 16)
     payload_unsupported_format_length =
-      <<82, 73, 70, 70, 52, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 18, 0, 0, 0, 1, 0>>
+      <<82, 73, 70, 70, 52, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 18, 0, 0, 0, 1, 0>> <>
+        <<0::176>>
 
     assert_raise(
       RuntimeError,
-      ~r"formats different than PCM are not supported",
+      ~r"formats different than PCM and IEEE float are not supported",
       fn ->
         @module.handle_process_list(
           :input,
