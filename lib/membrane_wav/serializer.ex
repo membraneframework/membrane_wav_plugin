@@ -17,8 +17,8 @@ defmodule Membrane.WAV.Serializer do
   @file_length 0
   @data_length 0
 
-  @wave_format_pcm 1
-  @wave_format_ieee_float 3
+  @pcm_format_code 1
+  @ieee_float_format_code 3
 
   @format_chunk_length 16
 
@@ -105,10 +105,9 @@ defmodule Membrane.WAV.Serializer do
     block_alignment_unit = ceil(channels * bits_per_sample / 8)
 
     format_code =
-      if signedness == :f do
-        @wave_format_ieee_float
-      else
-        @wave_format_pcm
+      case signedness do
+        :f -> @ieee_float_format_code
+        _pcm -> @pcm_format_code
       end
 
     <<
