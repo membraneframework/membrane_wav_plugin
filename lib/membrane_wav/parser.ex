@@ -42,13 +42,11 @@ defmodule Membrane.WAV.Parser do
   ## Parsing
 
   Stages of parsing:
-  - `:init` - Parser waits for the first 22 bytes. After getting them, it parses these bytes
-    to ensure that it is a WAV file. Parser knows `format chunk length` and `format`, so it
-    is able to raise an error in case of different `format` than 1 (PCM) or different
-    length than 16 (for PCM). After parsing, the stage is set to `:format`.
-  - `:format` - Parser waits for the next 22 bytes - `fmt` chunk (bytes 20 - 35) without
-    `format` and either `"fact"` and `fact chunk length` or `"data"` and `data length in bytes`.
-    Then it parses it and create `Membrane.RawAudio` struct with audio format to send it
+  - `:init` - Parser waits for the first 16 bytes. After getting them, it parses these bytes
+    to ensure that it is a WAV file. After parsing, the stage is set to `:format`.
+  - `:format` - Parser waits for the next 28 bytes - Parser  then knows `format chunk length` and `format`,
+    so it is able to raise an error in case of different `format` than 1 (PCM) / 3 (IEEE float) or different
+    length than 16 (for PCM). Then it parses it and create `Membrane.RawAudio` struct with audio format to send it
     as stream_format to the next element. Stage is set to `:fact` or `:data` depending on last 8 bytes.
   - `:fact` - Parser waits for `8 + fact chunk length` bytes. It  parses them only to check if
     the header is correct, but does not use that data in any way. After parsing, the stage is
@@ -63,8 +61,11 @@ defmodule Membrane.WAV.Parser do
 
   @pcm_format_size 16
 
-  @init_stage_size 22
-  @format_stage_size 22
+  @pcm_format_code 1
+  @ieee_float_format_code 3
+
+  @init_stage_size 16
+  @format_stage_size 28
   @data_stage_base_size 8
 
   def_output_pad :output,
@@ -131,12 +132,8 @@ defmodule Membrane.WAV.Parser do
       _file_size::32-little,
       "WAVE",
       "fmt ",
-      format_chunk_size::32-little,
-      format::16-little,
       rest::binary
     >> = payload
-
-    check_format(format, format_chunk_size)
 
     state = %{state | stage: :format}
 
@@ -146,6 +143,8 @@ defmodule Membrane.WAV.Parser do
   defp parse_payload(payload, %{stage: :format} = state, actions_acc)
        when byte_size(payload) >= @format_stage_size do
     <<
+      format_chunk_size::32-little,
+      format_code::16-little,
       channels::16-little,
       sample_rate::32-little,
       _data_transmission_rate::32,
@@ -156,10 +155,18 @@ defmodule Membrane.WAV.Parser do
       rest::binary
     >> = payload
 
+    check_format(format_code, format_chunk_size)
+
+    sample_type =
+      cond do
+        @pcm_format_code -> :s
+        @ieee_float_format_code -> :f
+      end
+
     format = %RawAudio{
       channels: channels,
       sample_rate: sample_rate,
-      sample_format: RawAudio.SampleFormat.from_tuple({:s, bits_per_sample, :le})
+      sample_format: RawAudio.SampleFormat.from_tuple({sample_type, bits_per_sample, :le})
     }
 
     next_stage =
@@ -195,11 +202,11 @@ defmodule Membrane.WAV.Parser do
     {Enum.reverse(actions_acc), state}
   end
 
-  defp check_format(format, format_chunk_size) do
+  defp check_format(format_code, format_chunk_size) do
     cond do
-      format != 1 ->
+      format_code not in [1, 3] ->
         raise """
-        formats different than PCM are not supported; expected 1, given #{format}; format chunk size: #{format_chunk_size}
+        formats different than PCM and IEEE float are not supported; expected #{@pcm_format_code} or #{@ieee_float_format_code}, given #{format_code}; format chunk size: #{format_chunk_size}
         """
 
       format_chunk_size != @pcm_format_size ->

@@ -17,7 +17,9 @@ defmodule Membrane.WAV.Serializer do
   @file_length 0
   @data_length 0
 
-  @audio_format 1
+  @pcm_format_code 1
+  @ieee_float_format_code 3
+
   @format_chunk_length 16
 
   @file_length_offset 4
@@ -97,10 +99,16 @@ defmodule Membrane.WAV.Serializer do
          sample_rate: sample_rate,
          sample_format: format
        }) do
-    {_signedness, bits_per_sample, _endianness} = RawAudio.SampleFormat.to_tuple(format)
+    {sample_type, bits_per_sample, _endianness} = RawAudio.SampleFormat.to_tuple(format)
 
     data_transmission_rate = ceil(channels * sample_rate * bits_per_sample / 8)
     block_alignment_unit = ceil(channels * bits_per_sample / 8)
+
+    format_code =
+      case sample_type do
+        :f -> @ieee_float_format_code
+        _pcm -> @pcm_format_code
+      end
 
     <<
       "RIFF",
@@ -108,7 +116,7 @@ defmodule Membrane.WAV.Serializer do
       "WAVE",
       "fmt ",
       @format_chunk_length::32-little,
-      @audio_format::16-little,
+      format_code::16-little,
       channels::16-little,
       sample_rate::32-little,
       data_transmission_rate::32-little,
