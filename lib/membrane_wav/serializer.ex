@@ -99,13 +99,13 @@ defmodule Membrane.WAV.Serializer do
          sample_rate: sample_rate,
          sample_format: format
        }) do
-    {signedness, bits_per_sample, _endianness} = RawAudio.SampleFormat.to_tuple(format)
+    {sample_type, bits_per_sample, _endianness} = RawAudio.SampleFormat.to_tuple(format)
 
     data_transmission_rate = ceil(channels * sample_rate * bits_per_sample / 8)
     block_alignment_unit = ceil(channels * bits_per_sample / 8)
 
     format_code =
-      case signedness do
+      case sample_type do
         :f -> @ieee_float_format_code
         _pcm -> @pcm_format_code
       end

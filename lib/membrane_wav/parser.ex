@@ -206,7 +206,7 @@ defmodule Membrane.WAV.Parser do
     cond do
       format_code not in [1, 3] ->
         raise """
-        formats different than PCM and IEEE float are not supported; expected 1 or 3, given #{format_code}; format chunk size: #{format_chunk_size}
+        formats different than PCM and IEEE float are not supported; expected #{@pcm_format_code} or #{@ieee_float_format_code}, given #{format_code}; format chunk size: #{format_chunk_size}
         """
 
       format_chunk_size != @pcm_format_size ->
