@@ -37,18 +37,9 @@ defmodule Membrane.WAV.Serializer do
                 default: false
               ]
 
-  def_output_pad :output,
-    mode: :pull,
-    demand_mode: :auto,
-    availability: :always,
-    accepted_format: _any
+  def_input_pad :input, accepted_format: RawAudio
 
-  def_input_pad :input,
-    mode: :pull,
-    availability: :always,
-    demand_unit: :bytes,
-    demand_mode: :auto,
-    accepted_format: RawAudio
+  def_output_pad :output, accepted_format: _any
 
   @impl true
   def handle_init(_ctx, options) do
@@ -73,19 +64,15 @@ defmodule Membrane.WAV.Serializer do
   end
 
   @impl true
-  def handle_process_list(:input, _buffers, _context, %{header_length: 0}) do
+  def handle_buffer(:input, _buffers, _context, %{header_length: 0}) do
     raise "Buffers received before format, cannot create the header"
   end
 
-  def handle_process_list(:input, buffers, _context, %{data_length: data_length} = state) do
-    data_length =
-      Enum.reduce(buffers, data_length, fn %Buffer{payload: payload}, acc ->
-        acc + byte_size(payload)
-      end)
+  def handle_buffer(:input, buffer, _context, %{data_length: data_length} = state) do
+    data_length = data_length + byte_size(buffer.payload)
+    state = %{state | data_length: data_length}
 
-    state = Map.put(state, :data_length, data_length)
-
-    {[buffer: {:output, buffers}], state}
+    {[buffer: {:output, buffer}], state}
   end
 
   @impl true

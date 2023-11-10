@@ -18,16 +18,16 @@ defmodule Membrane.WAV.PostprocessingTest do
     test "perform proper postprocessing", %{tmp_dir: tmp_dir} do
       output_path = Path.join(tmp_dir, "output.wav")
 
-      structure = [
+      spec = [
         child(:file_src, %Source{location: @input_path})
         |> child(:parser, Parser)
         |> child(:serializer, Serializer)
         |> child(:file_sink, %Sink{location: output_path})
       ]
 
-      assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
+      assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(spec: spec)
       assert_end_of_stream(pid, :file_sink, :input, 2_000)
-      Pipeline.terminate(pid, blocking?: true)
+      Pipeline.terminate(pid)
 
       assert :ok = Postprocessing.fix_wav_header(output_path)
 
