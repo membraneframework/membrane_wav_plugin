@@ -68,18 +68,9 @@ defmodule Membrane.WAV.Parser do
   @format_stage_size 28
   @data_stage_base_size 8
 
-  def_output_pad :output,
-    mode: :pull,
-    availability: :always,
-    demand_mode: :auto,
-    accepted_format: RawAudio
+  def_input_pad :input, accepted_format: RemoteStream
 
-  def_input_pad :input,
-    mode: :pull,
-    availability: :always,
-    demand_unit: :bytes,
-    demand_mode: :auto,
-    accepted_format: RemoteStream
+  def_output_pad :output, accepted_format: RawAudio
 
   @impl true
   def handle_init(_ctx, _options) do
@@ -98,15 +89,13 @@ defmodule Membrane.WAV.Parser do
   end
 
   @impl true
-  def handle_process_list(:input, buffers, _context, %{stage: :data} = state) do
-    {[buffer: {:output, buffers}], state}
+  def handle_buffer(:input, buffer, _context, %{stage: :data} = state) do
+    {[buffer: {:output, buffer}], state}
   end
 
-  def handle_process_list(:input, buffers, _context, state) do
+  def handle_buffer(:input, buffer, _context, state) do
     payload =
-      buffers
-      |> Enum.map(& &1.payload)
-      |> then(&[state.unparsed_data | &1])
+      [state.unparsed_data, buffer.payload]
       |> IO.iodata_to_binary()
 
     {actions, state} = parse_payload(payload, state)

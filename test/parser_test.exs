@@ -12,12 +12,12 @@ defmodule Membrane.WAV.ParserTest do
   @input_path Path.expand("fixtures/input.wav", __DIR__)
   @reference_path Path.expand("fixtures/reference.raw", __DIR__)
 
-  defp perform_test(structure) do
-    assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
+  defp perform_test(spec) do
+    assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(spec: spec)
 
     assert_start_of_stream(pid, :file_sink, :input)
     assert_end_of_stream(pid, :file_sink, :input, 5_000)
-    Pipeline.terminate(pid, blocking?: true)
+    Pipeline.terminate(pid)
   end
 
   test "parse and send proper format" do
@@ -27,16 +27,16 @@ defmodule Membrane.WAV.ParserTest do
       sample_format: :s16le
     }
 
-    structure = [
+    spec = [
       child(:file_src, %Membrane.File.Source{location: @input_path})
       |> child(:parser, Membrane.WAV.Parser)
       |> child(:sink, Sink)
     ]
 
-    assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(structure: structure)
+    assert {:ok, _supervisor_pid, pid} = Pipeline.start_link(spec: spec)
 
     assert_sink_stream_format(pid, :sink, ^expected_format)
-    Pipeline.terminate(pid, blocking?: true)
+    Pipeline.terminate(pid)
   end
 
   test "raise an error in case of unsupported format or format chunk length" do
@@ -54,9 +54,9 @@ defmodule Membrane.WAV.ParserTest do
       RuntimeError,
       ~r"formats different than PCM and IEEE float are not supported",
       fn ->
-        @module.handle_process_list(
+        @module.handle_buffer(
           :input,
-          [%Buffer{payload: payload_unsupported_format}],
+          %Buffer{payload: payload_unsupported_format},
           nil,
           %{stage: :init, unparsed_data: <<>>}
         )
@@ -67,9 +67,9 @@ defmodule Membrane.WAV.ParserTest do
       RuntimeError,
       ~r"format chunk size different than supported",
       fn ->
-        @module.handle_process_list(
+        @module.handle_buffer(
           :input,
-          [%Buffer{payload: payload_unsupported_format_length}],
+          %Buffer{payload: payload_unsupported_format_length},
           nil,
           %{stage: :init, unparsed_data: <<>>}
         )
@@ -83,13 +83,13 @@ defmodule Membrane.WAV.ParserTest do
     test "drop header", %{tmp_dir: tmp_dir} do
       output_path = Path.join(tmp_dir, "output.raw")
 
-      structure = [
+      spec = [
         child(:file_src, %Membrane.File.Source{location: @input_path})
         |> child(:parser, Membrane.WAV.Parser)
         |> child(:file_sink, %Membrane.File.Sink{location: output_path})
       ]
 
-      perform_test(structure)
+      perform_test(spec)
 
       assert {:ok, reference_file} = File.read(@reference_path)
       assert {:ok, output_file} = File.read(output_path)
@@ -99,7 +99,7 @@ defmodule Membrane.WAV.ParserTest do
     test "work properly with FFmpeg SWResample Converter", %{tmp_dir: tmp_dir} do
       output_path = Path.join(tmp_dir, "output.raw")
 
-      structure = [
+      spec = [
         child(:file_src, %Membrane.File.Source{location: @input_path})
         |> child(:parser, Membrane.WAV.Parser)
         |> child(:converter, %Membrane.FFmpeg.SWResample.Converter{
@@ -109,7 +109,7 @@ defmodule Membrane.WAV.ParserTest do
         |> child(:file_sink, %Membrane.File.Sink{location: output_path})
       ]
 
-      perform_test(structure)
+      perform_test(spec)
 
       assert {:ok, output_file} = File.read(output_path)
       assert byte_size(output_file) == 16
