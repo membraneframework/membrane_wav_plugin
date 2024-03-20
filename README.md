@@ -19,7 +19,7 @@ def deps do
   ]
 end
 ```
-
+ 
 ## Parser
 
 The Parser requires a WAV file on the input and provides a raw audio in uncompressed, PCM format on
