@@ -148,8 +148,8 @@ defmodule Membrane.WAV.Parser do
 
     sample_type =
       cond do
-        @pcm_format_code -> :s
-        @ieee_float_format_code -> :f
+        format_code == @pcm_format_code -> :s
+        format_code == @ieee_float_format_code -> :f
       end
 
     format = %RawAudio{
