@@ -15,6 +15,8 @@ jobs:
 
   test:
     uses: membraneframework/membrane_actions/.github/workflows/test.yml@main
+    with:
+      cache-build: false
 
   hex_publish:
     needs: [build_test, lint, test]
