@@ -173,7 +173,7 @@ defmodule Membrane.WAV.Parser do
        when byte_size(payload) >= stage_size + @data_stage_base_size do
     # Ignoring "fact" chunk, for PCM, if present, it only contains a number of samples in file
     <<
-      _fact_chunk::binary-size(stage_size),
+      _fact_chunk::binary-size(^stage_size),
       "data",
       data_size::32,
       rest::binary
